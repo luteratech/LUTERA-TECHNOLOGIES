@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   documentSchema,
   minor,
@@ -10,7 +10,8 @@ import {
   type Settings,
 } from "@/lib/contracts";
 import { api, Field, Notice, saveFile } from "./Workspace";
-import { useUnsavedChanges } from "@/lib/unsaved";
+import { mayLeave, useUnsavedChanges } from "@/lib/unsaved";
+import { workspaceLocation } from "@/lib/workspace-navigation";
 import { useRecords, Pagination } from "./records";
 import { Evidence } from "./business-fields";
 const today = () => new Date().toISOString().slice(0, 10);
@@ -56,12 +57,47 @@ export default function Documents({
     [search, setSearch] = useState(""),
     [filter, setFilter] = useState("all"),
     [searchBy, setSearchBy] = useState<"name" | "number">("name");
+  const [restored, setRestored] = useState(false);
+  const locationReady = useRef(false),
+    previous = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (initialId)
-      api<BusinessDocument>("business/legacy-document?id=" + initialId)
-        .then(setSelected)
-        .catch(() => {});
+    let active = true;
+    const params = new URLSearchParams(location.search),
+      id = initialId || params.get("document");
+    if (id && id !== "new") {
+      api<BusinessDocument>(
+        "business/legacy-document?id=" + encodeURIComponent(id),
+      )
+        .then((r) => {
+          if (active) setSelected(r);
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (active) setRestored(true);
+        });
+    } else {
+      if (id === "new") {
+        const type = params.get("documentKind");
+        if (type === "quotation" || type === "proforma" || type === "receipt")
+          setKind(type);
+        setSelected(null);
+      }
+      setRestored(true);
+    }
+    return () => {
+      active = false;
+    };
   }, [initialId]);
+  useEffect(() => {
+    if (!restored) return;
+    const id = selected === null ? "new" : selected?.id;
+    workspaceLocation(
+      { document: id || null, documentKind: selected === null ? kind : null },
+      !locationReady.current || (previous.current === "new" && !!selected),
+    );
+    previous.current = id;
+    locationReady.current = true;
+  }, [selected, kind, restored]);
   const listing = useRecords({
     area: "finance",
     initial: records,
@@ -84,7 +120,9 @@ export default function Documents({
         settings={settings}
         kind={kind}
         records={records}
-        onBack={() => setSelected(undefined)}
+        onBack={() => {
+          if (mayLeave()) setSelected(undefined);
+        }}
         onSaved={async (d) => {
           setSelected(d);
           await refresh();

@@ -13,6 +13,7 @@ import {
 import { businessDate, type Area, type Row } from "@/lib/business";
 import type { BusinessConfig } from "./BusinessWorkspace";
 import { mayLeave, useUnsavedChanges } from "@/lib/unsaved";
+import { workspaceLocation } from "@/lib/workspace-navigation";
 const reason = field(
   "reason",
   "Decision / correction reason",
@@ -325,6 +326,7 @@ export default function OperationsDesk() {
     [feedback, setFeedback] = useState(""),
     [error, setError] = useState("");
   const generation = useRef(0);
+  const locationReady = useRef(false);
   useUnsavedChanges(dirty);
   useEffect(() => {
     api<BusinessConfig>("business/config")
@@ -379,9 +381,8 @@ export default function OperationsDesk() {
   }, [config, module, page, query, from, to]);
   useEffect(() => {
     if (config) {
-      const u = new URL(location.href);
-      u.searchParams.set("control", module.entity);
-      history.replaceState(null, "", u.pathname + u.search);
+      workspaceLocation({ control: module.entity }, !locationReady.current);
+      locationReady.current = true;
     }
   }, [config, module]);
   const start = (

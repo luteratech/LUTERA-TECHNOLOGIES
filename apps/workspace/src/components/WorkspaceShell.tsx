@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { mayLeave } from "@/lib/unsaved";
 export default function WorkspaceShell({
   tabs,
   active,
@@ -9,15 +8,23 @@ export default function WorkspaceShell({
   role,
   busy,
   onSignout,
+  canBack,
+  canForward,
+  onBack,
+  onForward,
   children,
 }: {
   tabs: string[][];
   active: string;
-  onSelect: (area: string) => void;
+  onSelect: (area: string) => boolean | void;
   email: string;
   role: string;
   busy: boolean;
   onSignout: () => void;
+  canBack: boolean;
+  canForward: boolean;
+  onBack: () => void;
+  onForward: () => void;
   children: ReactNode;
 }) {
   const [desktopOpen, setDesktopOpen] = useState(true),
@@ -47,7 +54,7 @@ export default function WorkspaceShell({
     const escape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setMobileOpen(false);
-        toggle.current?.focus();
+        requestAnimationFrame(() => toggle.current?.focus());
       }
     };
     const outside = (e: PointerEvent) => {
@@ -65,6 +72,16 @@ export default function WorkspaceShell({
     };
   }, [mobileOpen]);
   const open = mobile ? mobileOpen : desktopOpen;
+  const close = () => {
+    if (mobile) setMobileOpen(false);
+    else {
+      setDesktopOpen(false);
+      try {
+        localStorage.setItem("lutera.workspace.sidebar.v1", "closed");
+      } catch {}
+    }
+    requestAnimationFrame(() => toggle.current?.focus());
+  };
   return (
     <div
       className="workspace"
@@ -81,16 +98,14 @@ export default function WorkspaceShell({
           type="button"
           aria-controls="workspace-navigation"
           aria-expanded={open}
-          aria-label={open ? "Close workspace menu" : "Open workspace menu"}
+          aria-label="Open workspace menu"
+          hidden={open}
           onClick={() => {
-            if (mobile) setMobileOpen(!mobileOpen);
+            if (mobile) setMobileOpen(true);
             else {
-              setDesktopOpen(!desktopOpen);
+              setDesktopOpen(true);
               try {
-                localStorage.setItem(
-                  "lutera.workspace.sidebar.v1",
-                  desktopOpen ? "closed" : "open",
-                );
+                localStorage.setItem("lutera.workspace.sidebar.v1", "open");
               } catch {}
             }
           }}
@@ -105,11 +120,7 @@ export default function WorkspaceShell({
             strokeWidth="1.8"
             strokeLinecap="round"
           >
-            {open ? (
-              <path d="m6 6 12 12M18 6 6 18" />
-            ) : (
-              <path d="M4 6h16M4 12h16M4 18h16" />
-            )}
+            <path d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
         <img
@@ -119,6 +130,54 @@ export default function WorkspaceShell({
           height="40"
         />
         <span className="private-label">Business workspace</span>
+        <div
+          className="workspace-history"
+          role="group"
+          aria-label="Page history"
+        >
+          <button
+            className="secondary"
+            type="button"
+            aria-label="Go back"
+            title="Go back"
+            disabled={!canBack}
+            onClick={onBack}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              aria-hidden="true"
+            >
+              <path d="m14 6-6 6 6 6" />
+            </svg>
+            <span>Back</span>
+          </button>
+          <button
+            className="secondary"
+            type="button"
+            aria-label="Go forward"
+            title="Go forward"
+            disabled={!canForward}
+            onClick={onForward}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              aria-hidden="true"
+            >
+              <path d="m10 6 6 6-6 6" />
+            </svg>
+            <span>Forward</span>
+          </button>
+        </div>
         <div className="account">
           <span className="account-email" title={email}>
             {email}
@@ -136,6 +195,28 @@ export default function WorkspaceShell({
           className="workspace-sidebar"
           aria-label="Workspace navigation"
         >
+          <div className="workspace-sidebar-heading">
+            <strong>Workspace</strong>
+            <button
+              className="secondary workspace-sidebar-close"
+              type="button"
+              aria-label="Close workspace menu"
+              title="Close menu"
+              onClick={close}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                aria-hidden="true"
+              >
+                <path d="m6 6 12 12M18 6 6 18" />
+              </svg>
+            </button>
+          </div>
           <label className="field nav-search">
             <span>Find a section</span>
             <input
@@ -155,8 +236,7 @@ export default function WorkspaceShell({
                   key={area}
                   aria-current={active === area ? "page" : undefined}
                   onClick={() => {
-                    if (area !== active && !mayLeave()) return;
-                    onSelect(area);
+                    if (area !== active && onSelect(area) === false) return;
                     setSearch("");
                     setMobileOpen(false);
                     if (mobile)

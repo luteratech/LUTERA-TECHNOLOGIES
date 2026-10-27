@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, saveFile } from "@/lib/client";
 import { money } from "@/lib/contracts";
 import {
@@ -13,6 +13,7 @@ import {
   commercialArea,
 } from "@/lib/business";
 import { mayLeave, useUnsavedChanges } from "@/lib/unsaved";
+import { workspaceLocation } from "@/lib/workspace-navigation";
 import {
   Fields,
   Summary,
@@ -411,6 +412,8 @@ export default function BusinessWorkspace({
 }: {
   onOpenDocument: (id?: string) => void;
 }) {
+  const locationReady = useRef(false);
+  const [restored, setRestored] = useState(false);
   const [quotationId, setQuotationId] = useState("");
   const [receiptId, setReceiptId] = useState("");
   const [config, setConfig] = useState<BusinessConfig | null>(null),
@@ -490,36 +493,53 @@ export default function BusinessWorkspace({
   }, [config, load]);
   useEffect(() => {
     if (!config) return;
-    const params = new URLSearchParams(window.location.search),
-      entity = params.get("module"),
-      kind = params.get("kind"),
-      id = params.get("record");
+    let active = true;
+    const params = new URLSearchParams(location.search);
     const target = resources.find(
-      (r) => r.entity === entity && (!r.kind || r.kind === kind),
+      (r) =>
+        r.entity === params.get("module") &&
+        (!r.kind || r.kind === params.get("kind")) &&
+        (config.access[r.area]?.read ||
+          (r.entity === "tasks" && config.access.support?.read)),
     );
-    if (!target || !id || !config.access[target.area]?.read) return;
-    api<{ record: Row }>(
-      "business/detail?entity=" +
-        target.entity +
-        "&id=" +
-        encodeURIComponent(id),
-    )
-      .then((r) => {
-        setResource(target);
-        setSelected(r.record);
-      })
-      .catch((e) => setError(e.message));
+    if (target) setResource(target);
+    const id = params.get("record");
+    if (target && id && id !== "new") {
+      api<{ record: Row }>(
+        "business/detail?entity=" +
+          target.entity +
+          "&id=" +
+          encodeURIComponent(id),
+      )
+        .then((r) => {
+          if (active) setSelected(r.record);
+        })
+        .catch((e) => {
+          if (active) setError(e.message);
+        })
+        .finally(() => {
+          if (active) setRestored(true);
+        });
+    } else {
+      if (target && id === "new") setSelected(null);
+      setRestored(true);
+    }
+    return () => {
+      active = false;
+    };
   }, [config]);
   useEffect(() => {
-    if (!config) return;
-    const url = new URL(window.location.href);
-    url.searchParams.set("module", resource.entity);
-    if (resource.kind) url.searchParams.set("kind", resource.kind);
-    else url.searchParams.delete("kind");
-    if (selected?.id) url.searchParams.set("record", selected.id);
-    else url.searchParams.delete("record");
-    history.replaceState(null, "", url.pathname + url.search);
-  }, [resource, selected, config]);
+    if (!config || !restored) return;
+    workspaceLocation(
+      {
+        module: resource.entity,
+        kind: resource.kind || null,
+        record: selected === null ? "new" : selected?.id || null,
+      },
+      !locationReady.current,
+    );
+    locationReady.current = true;
+  }, [resource, selected, config, restored]);
   const move = (r: Resource) => {
     if (!mayLeave()) return;
     setResource(r);

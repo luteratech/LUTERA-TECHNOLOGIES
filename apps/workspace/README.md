@@ -21,6 +21,19 @@ Open the exact generated path on that origin. `/` and `/admin` return 404.
 Authentication, MFA and database permissions protect the API independently of
 this path. No service-role key is needed or accepted by the app.
 
+## Workspace navigation
+
+The header has Back/Forward controls with unavailable directions disabled and a
+breadcrumb linking to the overview. Section changes, business modules/records,
+operational areas and document views use browser history on the existing private
+route. Browser Back/Forward also restore these views; record access is checked
+again by the existing authorized endpoints. Dirty forms ask before navigating.
+Only route IDs and navigation counters are retained, never unsaved form values.
+
+Close/collapse is on the sidebar itself. The header hamburger reopens a closed
+sidebar or the phone menu; it never becomes an X. Escape closes the phone menu
+and returns focus to the opener. Menus and controls retain 44px touch targets.
+
 Checks:
 
 ```sh

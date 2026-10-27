@@ -14,6 +14,10 @@ const Documents = dynamic(() => import("./documents"), {
   loading: () => <p role="status">Loading section…</p>,
 });
 import WorkspaceShell from "./WorkspaceShell";
+import {
+  workspaceLocation,
+  useWorkspaceHistory,
+} from "@/lib/workspace-navigation";
 const OperationsDesk = dynamic(() => import("./OperationsDesk"), {
   loading: () => <p role="status">Loading section…</p>,
 });
@@ -93,6 +97,7 @@ export default function Workspace() {
     [data, setData] = useState<State | null>(null),
     [tab, setTab] = useState("overview"),
     [documentId, setDocumentId] = useState<string | undefined>(undefined),
+    [navigationVersion, setNavigationVersion] = useState(0),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const activeSession = useRef<Session | null>(null);
@@ -133,6 +138,9 @@ export default function Workspace() {
               ? new URLSearchParams(window.location.search).get("section")!
               : "overview",
         );
+        setDocumentId(
+          new URLSearchParams(location.search).get("document") || undefined,
+        );
         await refresh();
       }
       if (!next.verified) setData(null);
@@ -156,15 +164,55 @@ export default function Workspace() {
       document.removeEventListener("visibilitychange", visible);
     };
   }, [checkSession]);
-  useEffect(() => {
-    if (!session?.verified) return;
-    const url = new URL(window.location.href);
-    url.searchParams.set("section", tab);
-    if (tab !== "operations")
-      for (const key of ["module", "kind", "record"])
-        url.searchParams.delete(key);
-    history.replaceState(null, "", url.pathname + url.search);
-  }, [tab, session?.verified]);
+  const navigation = useWorkspaceHistory(!!session?.verified, (pop) => {
+    const params = new URLSearchParams(location.search);
+    const area = params.get("section") || "overview";
+    setTab(
+      [
+        "overview",
+        "account",
+        "operations",
+        "controls",
+        "reports",
+        "content",
+        "finance",
+        "staff",
+        "settings",
+        "business-settings",
+        "members",
+        "audit",
+        "backup",
+      ].includes(area)
+        ? area
+        : "overview",
+    );
+    if (pop) {
+      setDocumentId(params.get("document") || undefined);
+      setNavigationVersion((v) => v + 1);
+      setError("");
+      requestAnimationFrame(() =>
+        document.getElementById("workspace-main")?.focus(),
+      );
+    }
+  });
+  const goToSection = (area: string, id?: string) => {
+    if (!mayLeave()) return false;
+    workspaceLocation({
+      section: area,
+      module: null,
+      kind: null,
+      record: null,
+      control: null,
+      document: id || null,
+      documentKind: null,
+      account: null,
+      notice: null,
+    });
+    setTab(area);
+    setDocumentId(id);
+    setError("");
+    return true;
+  };
   async function signout() {
     if (!mayLeave()) return;
     setBusy(true);
@@ -220,16 +268,30 @@ export default function Workspace() {
     <WorkspaceShell
       tabs={tabs}
       active={tab}
-      onSelect={(area) => {
-        setTab(area);
-        setError("");
-      }}
+      onSelect={goToSection}
+      canBack={navigation.back}
+      canForward={navigation.forward}
+      onBack={() => navigation.go(-1)}
+      onForward={() => navigation.go(1)}
       email={session.email}
       role={session.role}
       busy={busy}
       onSignout={signout}
     >
       <main id="workspace-main" tabIndex={-1}>
+        <nav className="workspace-breadcrumb" aria-label="Breadcrumb">
+          <button
+            type="button"
+            onClick={() => goToSection("overview")}
+            disabled={tab === "overview"}
+          >
+            Workspace
+          </button>
+          <span aria-hidden="true">/</span>
+          <span aria-current="page">
+            {tabs.find(([area]) => area === tab)?.[1]}
+          </span>
+        </nav>
         <div className="page-heading">
           <div>
             <p className="eyebrow">Lutera Technology Ltd</p>
@@ -252,18 +314,15 @@ export default function Workspace() {
         {!data ? (
           <Notice>Loading your records…</Notice>
         ) : (
-          <>
+          <div key={navigationVersion} className="workspace-page">
             {tab === "operations" && (
               <BusinessWorkspace
-                onOpenDocument={(id) => {
-                  setDocumentId(id);
-                  setTab("finance");
-                }}
+                onOpenDocument={(id) => goToSection("finance", id)}
               />
             )}
             {tab === "overview" && (
               <>
-                <BusinessDashboard onOpen={() => setTab("operations")} />
+                <BusinessDashboard onOpen={() => goToSection("operations")} />
                 <div className="stat-grid">
                   {[
                     ["Recent documents", data.documents.length],
@@ -289,14 +348,14 @@ export default function Workspace() {
                   </p>
                   <div className="actions">
                     {can(session.role, "finance") && (
-                      <button onClick={() => setTab("finance")}>
+                      <button onClick={() => goToSection("finance")}>
                         Prepare a document ↗
                       </button>
                     )}
                     {can(session.role, "content") && (
                       <button
                         className="secondary"
-                        onClick={() => setTab("content")}
+                        onClick={() => goToSection("content")}
                       >
                         Edit website
                       </button>
@@ -349,7 +408,7 @@ export default function Workspace() {
             {tab === "reports" && <BusinessReports />}
             {tab === "backup" && <Backups />}
             {tab === "account" && <Account session={session} />}
-          </>
+          </div>
         )}
       </main>
     </WorkspaceShell>

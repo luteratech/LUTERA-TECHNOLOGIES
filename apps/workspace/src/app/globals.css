@@ -1640,6 +1640,55 @@ dialog .actions {
   display: grid;
   place-items: center;
 }
+.workspace-menu[hidden] {
+  display: none;
+}
+.workspace-sidebar-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 6px 18px;
+}
+.workspace-sidebar-heading strong {
+  font-size: 14px;
+}
+.workspace-sidebar-close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0 !important;
+}
+.workspace-history {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+}
+.workspace-history button {
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+}
+.workspace-history button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.workspace-history button:not(:disabled):hover {
+  background: white;
+}
 .workspace .workspace-grid {
   display: grid;
   grid-template-columns: 232px minmax(0, 1fr);
@@ -1796,10 +1845,21 @@ dialog .actions {
   }
 }
 @media (max-width: 767px) {
+  .workspace-history {
+    padding: 0;
+    gap: 0;
+    border: 0;
+  }
+  .workspace-history button span {
+    display: none;
+  }
+  .workspace-history button {
+    padding: 0;
+  }
   .workspace .topbar {
     height: 64px;
-    padding: 0 12px;
-    gap: 12px;
+    padding: 0 8px;
+    gap: 8px;
   }
   .workspace .topbar > img {
     width: 104px;
@@ -1810,7 +1870,7 @@ dialog .actions {
   }
   .workspace .account button {
     font-size: 12px;
-    padding: 8px 12px;
+    padding: 8px;
   }
   .workspace .workspace-grid,
   .workspace[data-sidebar-open="false"] .workspace-grid {
@@ -1959,4 +2019,32 @@ dialog .actions {
 }
 .operation-record[open] > summary {
   margin-bottom: 16px;
+}
+
+@media (max-width: 360px) {
+  .workspace .topbar > img {
+    width: 80px;
+  }
+}
+
+.workspace-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 0 12px;
+}
+.workspace-breadcrumb button {
+  color: var(--blue);
+  border: 0;
+  background: transparent;
+  padding: 0 4px;
+  min-height: 44px;
+  font-size: 12px;
+}
+.workspace-breadcrumb button:disabled {
+  color: var(--muted);
+  opacity: 1;
 }
