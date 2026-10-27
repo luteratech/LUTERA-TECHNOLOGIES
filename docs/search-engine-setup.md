@@ -1,5 +1,35 @@
 # Search engine ownership and indexing
 
+## Indexing review — 27 October 2026
+
+The owner supplied five Search Console example URLs. Live checks confirm:
+
+| URL | Current behaviour | Expected handling |
+| --- | --- | --- |
+| `http://luteratech.com/` | Permanent 308 to HTTPS | Index the HTTPS destination, not the redirect. |
+| `http://www.luteratech.com/` | Permanent 308 to HTTPS, then primary domain | Index `https://luteratech.com/`. |
+| `/request-quote/?category=software` | 200 with canonical `/request-quote/` | Keep the preselected form working; consolidate indexing with the main quote page. |
+| `/request-quote/?category=consulting` | 200 with canonical `/request-quote/` | Same intentional consolidation. |
+| `/services/` | 200, self-canonical, index/follow, linked and in sitemap | Eligible for indexing; Google chooses whether and when to include it. |
+
+The service directory now includes a visible project/service selection guide and
+a service ItemList linked to its CollectionPage structured data. These improve
+the page's usefulness and description; they do not guarantee indexing or a rich
+result. All service names and URLs in the structured list come from the current
+public catalogue. Existing quote-query behaviour and private workspace noindex
+remain unchanged.
+
+After the update is live, inspect **https://luteratech.com/services/** in Search
+Console, select **Test live URL**, check that indexing is allowed and the rendered
+page is available, then select **Request indexing** if offered. Compare the
+user-declared and Google-selected canonical in the indexed report. Keep
+**https://luteratech.com/sitemap.xml** submitted. No repeated requests or redirect
+removals are needed; do not request indexing for the four duplicate/redirect URLs.
+The private workspace must remain excluded. Search Console report updates can lag
+behind the live page and no ranking/indexing date is promised.
+
+## Ownership and submission
+
 Vercel is the website host. The approved primary address is
 **https://luteratech.com/**. Use this domain for ownership and sitemap submission.
 GitHub Pages addresses are no longer hosting targets.

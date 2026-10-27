@@ -53,6 +53,13 @@ def schema(route,title,description,organization,origin,base):
     webpage={'@type':page_type,'@id':canonical+'#webpage','url':canonical,'name':title,'description':description,'inLanguage':'en-NG',
              'isPartOf':{'@id':home+'#website'},'about':{'@id':home+'#organization'}}
     graph=[organization,{'@type':'WebSite','@id':home+'#website','url':home,'name':'Lutera Technology Ltd','inLanguage':'en-NG','publisher':{'@id':home+'#organization'}},webpage]
+    if route=='services':
+        catalogue={'@type':'ItemList','@id':canonical+'#service-list','name':'Lutera IT and AI services','numberOfItems':len(SERVICES),'itemListElement':[
+            {'@type':'ListItem','position':i+1,'item':{'@type':'Service','@id':home+'services/'+service['slug']+'/#service',
+             'url':home+'services/'+service['slug']+'/','name':service['title'],'description':service['description'],
+             'provider':{'@id':home+'#organization'}}} for i,service in enumerate(SERVICES)]}
+        graph.append(catalogue)
+        webpage['mainEntity']={'@id':catalogue['@id']}
     if route and route not in ['404','thank-you']:
         crumbs=[('Home',home)]
         if route.startswith('services/'):crumbs.append(('Services',home+'services/'))

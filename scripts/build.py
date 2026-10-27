@@ -90,8 +90,21 @@ about=pagehero('Good technology starts<br>with understanding.','Lutera brings eq
 about+='<section><div class="wrap split"><div><h2>One team.<br>A broader perspective.</h2><p>Lutera Technology Ltd works across AI and automation, software development, analytics, cloud integration, technology consulting, hardware supply and support.</p><p>We help schools, public organisations and companies define their requirements, source suitable equipment and build or connect the systems they need. Computer-lab installation and commissioning form part of our installation and technical-support work.</p><p>Project specifications, deliverables and supply terms are agreed in writing. We keep the conversation clear from the first brief through handover and ongoing support.</p></div><figure class="service-figure">'+photo('consulting','A team discussing project requirements with laptops around a shared table')+'</figure></div></section>'
 about+='<section class="pale"><div class="wrap two-cards"><article class="card"><h2>Make technology useful.</h2><p>Our mission is to simplify how organisations plan, adopt, build, source and support technology, with practical thinking and clear communication.</p></article><article class="card"><h2>Keep the work moving.</h2><p>We bring the equipment, software and support conversation together, so each decision can serve the organisation beyond the initial purchase.</p></article></div></section>'
 about+=company_details()+commitments(BASE)+cta()
-servicepage=pagehero('The expertise your<br>next project needs.','Equipment and infrastructure. Software and intelligent systems. Advice and support. Explore all eight services and start with the outcome you need.','','Services')
-servicepage+='<section><div class="wrap">'+service_cards(BASE,icon,'h2')+'</div></section>'+commitments(BASE)+cta()
+servicepage=pagehero('IT and AI services.<br>Built around your organisation.','Lutera Technology Ltd brings hardware supply, software, AI, data, cloud and technical support together from Abuja. Explore our services to find the expertise your project needs.','','Services')
+servicepage+='<section><div class="wrap">'+service_cards(BASE,icon,'h2')+'</div></section>'
+servicepage+=('<section class="pale" aria-labelledby="service-planning"><div class="wrap split"><div>'
+              '<h2 id="service-planning">Choose the service around the work.</h2>'
+              '<p>For a new office or computer lab, start with the number of users, the applications they need and the space available. Hardware supply and procurement cover the equipment; installation and technical support cover setup, commissioning and the agreed support arrangements.</p>'
+              '<p>For a digital project, describe what your team does today and what should improve. Software development supports a new application or business process. AI and automation can assist with defined repeatable tasks, data analytics supports reporting and decisions, and cloud integration connects the systems involved.</p>'
+              '<p>If the right approach is still unclear, begin with technology consulting. One project can involve several services. We discuss the dependencies and responsibilities together before agreeing the scope.</p></div><div>'
+              '<h2>What to include in your brief.</h2>'
+              '<ul class="ticks"><li>The business problem, the people affected and the outcome you need.</li>'
+              '<li>Your existing equipment, applications or data sources, and anything that must connect.</li>'
+              '<li>The project location, estimated quantities or users, and preferred timing.</li>'
+              '<li>Any delivery, handover, training or ongoing support requirements.</li></ul>'
+              '<p>You can enquire before you have a finished specification. Include the details you know; leave out passwords and confidential records. We use the brief to clarify requirements and prepare an appropriate next step.</p>'
+              +btn('request-quote','Discuss your service requirements')+'</div></div></section>')
+servicepage+=commitments(BASE)+cta()
 
 # The experience module supplies Solutions and the native, progressively enhanced quote form.
 pages={'':('Home',home),'about':('About',about),'services':('Services',servicepage),'solutions':('Solutions',''),'request-quote':('Request a quote','')}
