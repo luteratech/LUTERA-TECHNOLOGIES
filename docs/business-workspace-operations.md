@@ -186,6 +186,31 @@ policies, not a provider-level Auth disaster recovery exercise.
   endpoint. The post-deployment error/fatal log scan returned no entries.
 - A real signed-in owner business pilot remains separate from fixture tests.
 
+## Department navigation
+
+The private workspace opens on a task-oriented Dashboard. Its Lutera blue menu
+groups existing tools into Sales & Customers, Finance, Procurement & Inventory,
+Projects & Support, Website cPanel, Staff & Cards, and Administration. Select a
+department to see its working steps and tools; the chevron expands its shortcuts.
+Search the sidebar to find a task across departments, or search within a
+department. Quick actions open the appropriate new-record form.
+
+Finance includes manual customer payments with required evidence, receipt
+generation, allocations, invoices, expenses, corrections and reconciliation.
+Earlier standalone receipts remain in their archive. Website cPanel keeps draft
+editing, preview, publication and live-revision checks together. Saving a draft
+still does not publish it.
+
+Department visibility follows existing role capabilities and explicit business
+grants; moving a tool does not grant additional access. The owner configures
+business record scopes and editing/approval rights under Administration →
+Business permissions. The API and database continue to enforce authorization.
+
+The sidebar closes with its own close button on tablet/desktop; a header menu
+button reopens it. Phones use a searchable dropdown menu. Back/Forward arrows
+remain above the page body, alongside breadcrumbs. Existing section/module URLs,
+record restoration and unsaved-change guards remain supported.
+
 ## Remaining owner/provider configuration
 
 - Install/authorize the company Drive trigger and retain the recovery key.

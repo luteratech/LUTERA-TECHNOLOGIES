@@ -14,6 +14,7 @@ import { businessDate, type Area, type Row } from "@/lib/business";
 import type { BusinessConfig } from "./BusinessWorkspace";
 import { mayLeave, useUnsavedChanges } from "@/lib/unsaved";
 import { workspaceLocation } from "@/lib/workspace-navigation";
+import { workspaceTools } from "@/lib/workspace-areas";
 const reason = field(
   "reason",
   "Decision / correction reason",
@@ -306,7 +307,11 @@ const modules: Module[] = [
       "Review recipient and linked records, pause pending messages or retry within the provider safety window. Sent messages cannot be replayed.",
   },
 ];
-export default function OperationsDesk() {
+export default function OperationsDesk({
+  department,
+}: {
+  department?: string;
+}) {
   const [query, setQuery] = useState(""),
     [from, setFrom] = useState(""),
     [to, setTo] = useState(""),
@@ -405,7 +410,16 @@ export default function OperationsDesk() {
       </p>
     );
   const allowed = modules.filter(
-      (m) => config.access[m.area]?.read && (!m.ownerOnly || config.owner),
+      (m) =>
+        config.access[m.area]?.read &&
+        (!m.ownerOnly || config.owner) &&
+        (!department ||
+          workspaceTools.some(
+            (t) =>
+              t.department === department &&
+              t.section === "controls" &&
+              t.params?.control === m.entity,
+          )),
     ),
     approve = config.access[module.area]?.approve,
     write = config.access[module.area]?.write;

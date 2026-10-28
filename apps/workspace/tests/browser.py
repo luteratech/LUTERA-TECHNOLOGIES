@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import re
 import shutil
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
 root=Path(__file__).resolve().parents[1]
 values=dict(line.split('=',1) for line in (root/'.env.local').read_text().splitlines() if line and not line.startswith('#'))
 origin=os.environ.get('LUTERA_TEST_URL',values['WORKSPACE_ORIGIN'])
@@ -20,7 +20,7 @@ errors=[]
 resultdir=root/'test-results';resultdir.mkdir(exist_ok=True)
 def payload(route):
  global session
- action=route.request.url.split('/api/',1)[1]
+ action=route.request.url.split('/api/',1)[1].split('?')[0]
  body=route.request.post_data_json if route.request.method=='POST' else {}
  calls.append(action)
  def respond(value,status=200):route.fulfill(status=status,content_type='application/json',body=json.dumps(value))
@@ -29,7 +29,12 @@ def payload(route):
  if action=='mfa/enroll':return respond({'id':'cf4464da-bb13-42d0-89a1-92a34cfbdc64','qr':'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100"/></svg>','secret':'UI-FIXTURE-NOT-A-REAL-KEY'})
  if action=='mfa/verify':session['verified']=True;return respond({'success':True})
  if action=='state':return respond(state)
- if action=='records':return respond({'rows':state['documents' if body['area']=='finance' else 'staff'],'more':False})
+ if action=='business/config':return respond({'owner':True,'me':'daae4165-3435-47ea-b5f1-f5df516e9c6b','people':[],'access':{a:{'read':True,'write':True,'approve':True} for a in ['sales','finance','inventory','procurement','projects','support','reports']}})
+ if action=='business/dashboard':return respond({'enquiries':0,'open_projects':0,'overdue_tasks':0,'finance':[]})
+ if action=='records':
+  records=state['documents' if body['area']=='finance' else 'staff']
+  if body.get('kind'):records=[r for r in records if r.get('kind')==body['kind']]
+  return respond({'rows':records,'more':False})
  if action=='auth/signout':session=None;return respond({'success':True})
  if action=='documents/save':
   doc=body['payload'];subtotal=sum(i['quantity']*i['unit_minor'] for i in doc['items']);total=subtotal-doc['discount_minor']+((subtotal-doc['discount_minor'])*doc['tax_bps']+5000)//10000
@@ -77,10 +82,11 @@ with sync_playwright() as p:
  page.get_by_role('button',name='Set up authenticator').click()
  page.get_by_label('Six-digit code').fill('123456')
  page.get_by_role('button',name='Verify and open workspace').click()
- page.get_by_role('heading',name='Overview',exact=True).wait_for()
+ page.get_by_role('heading',name='Dashboard',exact=True).wait_for()
  accessibility('overview')
  page.screenshot(path=str(resultdir/'overview-desktop.png'),full_page=True)
- page.get_by_role('button',name='Documents',exact=True).click()
+ page.locator('#workspace-navigation').get_by_role('button',name='Finance',exact=True).click()
+ page.locator('#workspace-navigation').get_by_role('button',name='Document archive',exact=True).click()
  page.get_by_role('button',name='New document').click()
  page.get_by_label('Customer name').fill('UI Sample Customer')
  page.get_by_label('Document date').fill('2026-10-22')
@@ -99,7 +105,19 @@ with sync_playwright() as p:
  assert exported.value.suggested_filename=='fixture.pdf'
  page.screenshot(path=str(resultdir/'document-desktop.png'),full_page=True)
  accessibility('document')
- page.get_by_role('button',name='Staff & cards',exact=True).click()
+ # Standalone document tools must filter the shared archive and open the right new-document form.
+ page.locator('#workspace-navigation').get_by_role('button',name='Sales & Customers',exact=True).click()
+ page.locator('#workspace-navigation').get_by_role('button',name='Quotation documents',exact=True).click()
+ page.get_by_text('LUT-QUO-2026-000001',exact=True).wait_for()
+ page.locator('#workspace-navigation').get_by_role('button',name='Finance',exact=True).click()
+ page.locator('#workspace-navigation').get_by_role('button',name='Pro forma invoices',exact=True).click()
+ page.get_by_role('heading',name='Pro forma invoices',exact=True,level=1).wait_for()
+ expect(page.get_by_text('LUT-QUO-2026-000001',exact=True)).to_have_count(0)
+ page.get_by_role('button',name='Prepare a pro forma',exact=True).click()
+ page.get_by_label('Customer name').wait_for()
+ assert 'documentKind=proforma' in page.url and 'document=new' in page.url
+ page.locator('#workspace-navigation').get_by_role('button',name='Staff & Cards',exact=True).click()
+ page.locator('#workspace-navigation').get_by_role('button',name='Staff profiles & cards',exact=True).click()
  page.get_by_role('button',name='Add staff profile').click()
  page.get_by_label(re.compile('^name',re.I)).fill('Sample Profile')
  page.get_by_label(re.compile('^title',re.I)).fill('UI review — sample only')
@@ -109,8 +127,9 @@ with sync_playwright() as p:
  page.get_by_label('Template').select_option('id')
  page.screenshot(path=str(resultdir/'staff-desktop.png'),full_page=True)
  accessibility('staff')
- page.get_by_role('button',name='Website',exact=True).click()
- page.get_by_label('legal name',exact=True).fill('Lutera Technology Ltd')
+ page.locator('#workspace-navigation').get_by_role('button',name='Website cPanel',exact=True).click()
+ page.locator('#workspace-navigation').get_by_role('button',name='Company & contact',exact=True).click()
+ page.get_by_label('Registered company name',exact=True).fill('Lutera Technology Ltd')
  page.get_by_role('button',name='Save website draft').click()
  page.get_by_text('Website draft saved.',exact=False).wait_for()
  page.get_by_role('button',name='Publish website').click()

@@ -32,6 +32,7 @@ import BusinessReceiptViewer from "./BusinessReceiptViewer";
 import BusinessDelivery from "./BusinessDelivery";
 import BusinessQuoteEditor from "./BusinessQuoteEditor";
 import CustomerStatement from "./CustomerStatement";
+import { workspaceTools } from "@/lib/workspace-areas";
 export type BusinessConfig = {
   owner?: boolean;
   legacy_documents?: boolean;
@@ -211,9 +212,7 @@ export function BusinessDashboard({ onOpen }: { onOpen?: () => void }) {
           <p className="eyebrow">Supply. Build. Connect.</p>
           <h2>Your business at a glance</h2>
         </div>
-        {onOpen && (
-          <button onClick={onOpen}>Open business operations ↗</button>
-        )}
+        {onOpen && <button onClick={onOpen}>View sales workspace ↗</button>}
       </div>
       <div className="form-grid">
         <label className="field">
@@ -329,7 +328,7 @@ export function BusinessDashboard({ onOpen }: { onOpen?: () => void }) {
     </section>
   );
 }
-function EntryForm({
+export function EntryForm({
   title,
   fields,
   initial,
@@ -409,7 +408,9 @@ function EntryForm({
 }
 export default function BusinessWorkspace({
   onOpenDocument,
+  department,
 }: {
+  department?: string;
   onOpenDocument: (id?: string) => void;
 }) {
   const locationReady = useRef(false);
@@ -590,7 +591,15 @@ export default function BusinessWorkspace({
     (r) =>
       (r.entity !== "portal_members" || config.owner) &&
       (config.access[r.area]?.read ||
-        (r.entity === "tasks" && config.access.support?.read)),
+        (r.entity === "tasks" && config.access.support?.read)) &&
+      (!department ||
+        workspaceTools.some(
+          (t) =>
+            t.department === department &&
+            t.section === "operations" &&
+            t.params?.module === r.entity &&
+            (t.params?.kind || "") === (r.kind || ""),
+        )),
   );
   if (!allowed.length)
     return (
@@ -1053,9 +1062,9 @@ export default function BusinessWorkspace({
     <>
       <div className="business-nav">
         <label className="field">
-          <span>Business module</span>
+          <span>Choose a tool</span>
           <select
-            aria-label="Business module"
+            aria-label="Choose a tool"
             value={resources.indexOf(resource)}
             onChange={(e) => move(resources[Number(e.target.value)])}
           >
@@ -1067,45 +1076,9 @@ export default function BusinessWorkspace({
           </select>
         </label>
         <div className="actions">
-          {config.owner && (
-            <button
-              className="secondary"
-              onClick={() =>
-                act(
-                  "Add module permission",
-                  [
-                    field("email", "Approved account email", "email", true),
-                    field("area", "Module", "select", true, [
-                      "sales",
-                      "finance",
-                      "procurement",
-                      "inventory",
-                      "projects",
-                      "support",
-                      "reports",
-                    ]),
-                    field("scope", "Scope", "select", true, [
-                      "assigned",
-                      "all",
-                    ]),
-                    field("write_access", "May create and edit", "checkbox"),
-                    field(
-                      "approve_access",
-                      "May approve sensitive actions",
-                      "checkbox",
-                    ),
-                  ],
-                  "misc",
-                  { action: "grant" },
-                )
-              }
-            >
-              Module access
-            </button>
-          )}
           {(config.owner || config.legacy_documents) && (
             <button className="secondary" onClick={() => onOpenDocument()}>
-              Quotations & receipts ↗
+              Document archive ↗
             </button>
           )}
         </div>
@@ -1113,7 +1086,7 @@ export default function BusinessWorkspace({
       <section className="panel">
         <div className="toolbar">
           <div>
-            <p className="eyebrow">Business operations</p>
+            <p className="eyebrow">Your records</p>
             <h2>{resource.label}</h2>
           </div>
           <div className="actions">
@@ -1122,7 +1095,14 @@ export default function BusinessWorkspace({
                 resource.entity === "commercial" ||
                 resource.entity === "payments" ||
                 resource.entity === "expenses") && (
-                <button onClick={() => setSelected(null)}>New record +</button>
+                <button onClick={() => setSelected(null)}>
+                  {workspaceTools.find(
+                    (t) =>
+                      t.section === "operations" &&
+                      t.params?.module === resource.entity &&
+                      (t.params?.kind || "") === (resource.kind || ""),
+                  )?.create || "Add record"}
+                </button>
               )}
             {resource.entity === "stock" && writable && (
               <button
@@ -1684,7 +1664,7 @@ export default function BusinessWorkspace({
             <p>
               {query
                 ? "Try another search."
-                : "Create the first record when you are ready."}
+                : "Use the action above to add a record, or choose another tool."}
             </p>
           </div>
         )}

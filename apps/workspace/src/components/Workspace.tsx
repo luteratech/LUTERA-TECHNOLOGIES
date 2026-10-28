@@ -14,6 +14,18 @@ const Documents = dynamic(() => import("./documents"), {
   loading: () => <p role="status">Loading section…</p>,
 });
 import WorkspaceShell from "./WorkspaceShell";
+import WorkspaceAreas from "./WorkspaceAreas";
+const BusinessAccess = dynamic(() => import("./BusinessAccess"), {
+  loading: () => <p role="status">Opening permissions…</p>,
+});
+import {
+  departments,
+  workspaceSections,
+  visibleTools,
+  toolAt,
+  departmentFor,
+  type Destination,
+} from "@/lib/workspace-areas";
 import {
   workspaceLocation,
   useWorkspaceHistory,
@@ -40,7 +52,10 @@ const BusinessAdministration = dynamic(
   () => import("./BusinessAdministration"),
   { loading: () => <p role="status">Loading section…</p> },
 );
-import BusinessWorkspace, { BusinessDashboard } from "./BusinessWorkspace";
+import BusinessWorkspace, {
+  BusinessDashboard,
+  type BusinessConfig,
+} from "./BusinessWorkspace";
 import PasswordInput from "./PasswordInput";
 import { api, saveFile } from "@/lib/client";
 export { api, saveFile } from "@/lib/client";
@@ -96,13 +111,20 @@ export default function Workspace() {
     [loading, setLoading] = useState(true),
     [data, setData] = useState<State | null>(null),
     [tab, setTab] = useState("overview"),
+    [accessConfig, setAccessConfig] = useState<BusinessConfig | null>(null),
+    [routeSearch, setRouteSearch] = useState(""),
     [documentId, setDocumentId] = useState<string | undefined>(undefined),
     [navigationVersion, setNavigationVersion] = useState(0),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const activeSession = useRef<Session | null>(null);
   const refresh = useCallback(async () => {
-    setData(await api<State>("state"));
+    await Promise.all([
+      api<State>("state").then(setData),
+      api<BusinessConfig>("business/config")
+        .then((c) => setAccessConfig(c.access ? c : null))
+        .catch(() => setAccessConfig(null)),
+    ]);
   }, []);
   const checkSession = useCallback(async () => {
     try {
@@ -118,26 +140,14 @@ export default function Workspace() {
           new URLSearchParams(window.location.search).get("account") ===
             "password"
             ? "account"
-            : [
-                  "operations",
-                  "controls",
-                  "reports",
-                  "content",
-                  "finance",
-                  "staff",
-                  "settings",
-                  "business-settings",
-                  "members",
-                  "audit",
-                  "backup",
-                  "account",
-                ].includes(
+            : workspaceSections.includes(
                   new URLSearchParams(window.location.search).get("section") ||
                     "",
                 )
               ? new URLSearchParams(window.location.search).get("section")!
               : "overview",
         );
+        setRouteSearch(location.search);
         setDocumentId(
           new URLSearchParams(location.search).get("document") || undefined,
         );
@@ -167,25 +177,8 @@ export default function Workspace() {
   const navigation = useWorkspaceHistory(!!session?.verified, (pop) => {
     const params = new URLSearchParams(location.search);
     const area = params.get("section") || "overview";
-    setTab(
-      [
-        "overview",
-        "account",
-        "operations",
-        "controls",
-        "reports",
-        "content",
-        "finance",
-        "staff",
-        "settings",
-        "business-settings",
-        "members",
-        "audit",
-        "backup",
-      ].includes(area)
-        ? area
-        : "overview",
-    );
+    setTab(workspaceSections.includes(area) ? area : "overview");
+    setRouteSearch(location.search);
     if (pop) {
       setDocumentId(params.get("document") || undefined);
       setNavigationVersion((v) => v + 1);
@@ -195,24 +188,34 @@ export default function Workspace() {
       );
     }
   });
-  const goToSection = (area: string, id?: string) => {
+  const openDestination = (target: Destination) => {
     if (!mayLeave()) return false;
     workspaceLocation({
-      section: area,
+      section: target.section,
       module: null,
       kind: null,
       record: null,
       control: null,
-      document: id || null,
+      document: null,
       documentKind: null,
+      editor: null,
+      tool: null,
       account: null,
       notice: null,
+      ...target.params,
     });
-    setTab(area);
-    setDocumentId(id);
+    if (target.section === tab) setNavigationVersion((v) => v + 1);
+    setTab(target.section);
+    setRouteSearch(location.search);
+    setDocumentId(target.params?.document);
     setError("");
+    requestAnimationFrame(() =>
+      document.getElementById("workspace-main")?.focus(),
+    );
     return true;
   };
+  const goToSection = (area: string, id?: string) =>
+    openDestination({ section: area, params: id ? { document: id } : {} });
   async function signout() {
     if (!mayLeave()) return;
     setBusy(true);
@@ -229,30 +232,46 @@ export default function Workspace() {
       setBusy(false);
     }
   }
-  const tabs = [
-    ["overview", "Overview"],
-    ["account", "My account"],
-    ["operations", "Business operations"],
-    ["controls", "Operational controls"],
-    ["reports", "Management reports"],
-    ["content", "Website"],
-    ["finance", "Documents"],
-    ["staff", "Staff & cards"],
-    ["settings", "Company settings"],
-    ["business-settings", "Operations settings"],
-    ["members", "Access"],
-    ["audit", "Activity"],
-    ["backup", "Backups"],
-  ].filter(
-    ([area]) =>
-      area === "overview" ||
-      area === "account" ||
-      area === "operations" ||
-      area === "controls" ||
-      (area === "reports" && !!session && can(session.role, "finance")) ||
-      (session &&
-        can(session.role, area === "business-settings" ? "members" : area)),
-  );
+  const tools = session ? visibleTools(session.role, accessConfig) : [];
+  const params = new URLSearchParams(routeSearch);
+  const currentTool = toolAt(tab, params, tools);
+  const departmentId = departmentFor(tab, params);
+  const department = departments.find((d) => d.id === departmentId);
+  const isDepartment = departments.some((d) => d.id === tab);
+  const requiredCapability = (
+    {
+      finance: "finance",
+      staff: "staff",
+      content: "content",
+      settings: "settings",
+      members: "members",
+      "business-access": "members",
+      "business-settings": "members",
+      audit: "audit",
+      backup: "backup",
+      reports: "finance",
+    } as Record<string, string>
+  )[tab];
+  const legacyLabels: Record<string, string> = {
+    overview: "Dashboard",
+    account: "My account",
+    operations: "Business tools",
+    controls: "Additional tools",
+    finance: "Document archive",
+    content: "Website editor",
+    reports: "Financial reports",
+    staff: "Staff profiles & cards",
+    settings: "Company document settings",
+    "business-settings": "Operations settings",
+    members: "User access",
+    audit: "Activity history",
+    backup: "Backups & recovery",
+  };
+  const title =
+    departments.find((d) => d.id === tab)?.label ||
+    currentTool?.label ||
+    legacyLabels[tab] ||
+    "Workspace";
   if (loading)
     return (
       <main className="auth-shell">
@@ -266,9 +285,11 @@ export default function Workspace() {
     );
   return (
     <WorkspaceShell
-      tabs={tabs}
+      tools={tools}
       active={tab}
-      onSelect={goToSection}
+      activeDepartment={departmentId}
+      activeTool={currentTool?.id}
+      onNavigate={openDestination}
       email={session.email}
       role={session.role}
       busy={busy}
@@ -330,15 +351,24 @@ export default function Workspace() {
           >
             Workspace
           </button>
+          {department && !isDepartment && (
+            <>
+              <span aria-hidden="true">/</span>
+              <button
+                type="button"
+                onClick={() => openDestination({ section: department.id })}
+              >
+                {department.label}
+              </button>
+            </>
+          )}
           <span aria-hidden="true">/</span>
-          <span aria-current="page">
-            {tabs.find(([area]) => area === tab)?.[1]}
-          </span>
+          <span aria-current="page">{title}</span>
         </nav>
         <div className="page-heading">
           <div>
             <p className="eyebrow">Lutera Technology Ltd</p>
-            <h1>{tabs.find(([area]) => area === tab)?.[1]}</h1>
+            <h1>{title}</h1>
           </div>
           <button
             className="secondary"
@@ -356,64 +386,83 @@ export default function Workspace() {
         )}
         {!data ? (
           <Notice>Loading your records…</Notice>
+        ) : requiredCapability && !can(session.role, requiredCapability) ? (
+          <Notice>
+            Your account does not have access to this tool. Choose a tool from
+            your workspace menu.
+          </Notice>
         ) : (
           <div key={navigationVersion} className="workspace-page">
+            {isDepartment && (
+              <WorkspaceAreas
+                area={tab}
+                tools={tools}
+                config={accessConfig}
+                open={openDestination}
+                website={
+                  data.content
+                    ? {
+                        version: data.content.version,
+                        connected: data.publishing_connected,
+                        status: data.publications[0]?.status,
+                      }
+                    : undefined
+                }
+              />
+            )}
+            {currentTool && !isDepartment && tab !== "content" && (
+              <div className="tool-context">
+                <p>{currentTool.description}</p>
+                {currentTool.guide && (
+                  <details>
+                    <summary>How this task works</summary>
+                    <ol>
+                      {currentTool.guide.map((step) => (
+                        <li key={step}>{step}</li>
+                      ))}
+                    </ol>
+                  </details>
+                )}
+              </div>
+            )}
             {tab === "operations" && (
               <BusinessWorkspace
+                department={departmentId}
                 onOpenDocument={(id) => goToSection("finance", id)}
               />
             )}
             {tab === "overview" && (
               <>
-                <BusinessDashboard onOpen={() => goToSection("operations")} />
-                <div className="stat-grid">
-                  {[
-                    ["Recent documents", data.documents.length],
-                    [
-                      "Drafts to review",
-                      data.documents.filter((d) => d.status === "draft").length,
-                    ],
-                    ["Recent staff profiles", data.staff.length],
-                  ].map(([label, value]) => (
-                    <article className="stat" key={label}>
-                      <span>{label}</span>
-                      <strong>{value}</strong>
-                    </article>
-                  ))}
-                </div>
-                <section className="panel welcome">
-                  <p className="eyebrow">Supply. Build. Connect.</p>
-                  <h2>Make the next step a considered one.</h2>
-                  <p>
-                    Prepare a quotation, update your website draft, or create a
-                    staff card. Issued financial documents are locked and every
-                    change leaves an activity record.
-                  </p>
-                  <div className="actions">
-                    {can(session.role, "finance") && (
-                      <button onClick={() => goToSection("finance")}>
-                        Prepare a document ↗
-                      </button>
-                    )}
-                    {can(session.role, "content") && (
-                      <button
-                        className="secondary"
-                        onClick={() => goToSection("content")}
-                      >
-                        Edit website
-                      </button>
-                    )}
-                  </div>
-                </section>
-                <Notice>
-                  Sessions expire after 12 hours. Signing out revokes this
-                  account’s sessions on every device. Keep your authenticator
-                  recovery arrangements with the company owner.
-                </Notice>
+                <WorkspaceAreas
+                  area="overview"
+                  tools={tools}
+                  config={accessConfig}
+                  open={openDestination}
+                />
+                {accessConfig &&
+                  Object.values(accessConfig.access).some((a) => a.read) && (
+                    <BusinessDashboard
+                      onOpen={
+                        tools.some((t) => t.department === "sales")
+                          ? () => openDestination({ section: "sales" })
+                          : undefined
+                      }
+                    />
+                  )}
               </>
             )}
             {tab === "finance" && (
               <Documents
+                focusKind={
+                  ["quotation", "proforma", "receipt"].includes(
+                    params.get("documentKind") || "",
+                  )
+                    ? (params.get("documentKind") as
+                        | "quotation"
+                        | "proforma"
+                        | "receipt")
+                    : undefined
+                }
                 initialId={documentId}
                 records={data.documents}
                 settings={data.settings!.payload}
@@ -442,10 +491,13 @@ export default function Workspace() {
                 refresh={refresh}
               />
             )}
+            {tab === "business-access" && (
+              <BusinessAccess config={accessConfig} />
+            )}
             {tab === "members" && (
               <Members records={data.members} refresh={refresh} />
             )}
-            {tab === "controls" && <OperationsDesk />}
+            {tab === "controls" && <OperationsDesk department={departmentId} />}
             {tab === "audit" && <BusinessActivity />}
             {tab === "business-settings" && <BusinessAdministration />}
             {tab === "reports" && <BusinessReports />}

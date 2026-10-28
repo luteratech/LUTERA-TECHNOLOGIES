@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { api, Notice } from "./Workspace";
 export function useRecords<T>({
   area,
+  kind,
   initial,
   query,
   field = "name",
@@ -10,6 +11,7 @@ export function useRecords<T>({
   enabled = true,
 }: {
   area: "finance" | "staff";
+  kind?: "quotation" | "proforma" | "receipt";
   initial: T[];
   query: string;
   field?: "name" | "number" | "title";
@@ -32,6 +34,7 @@ export function useRecords<T>({
       try {
         const next = await api<{ rows: T[]; more: boolean }>("records", {
           area,
+          ...(kind ? { kind } : {}),
           query,
           field,
           status,
@@ -48,7 +51,7 @@ export function useRecords<T>({
       alive = false;
       clearTimeout(timer);
     };
-  }, [area, initial, query, field, status, page, enabled]);
+  }, [area, kind, initial, query, field, status, page, enabled]);
   return { ...result, page, setPage, loading, error };
 }
 export function Pagination({

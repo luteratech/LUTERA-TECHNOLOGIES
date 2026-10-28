@@ -1,18 +1,28 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  departments,
+  type Destination,
+  type WorkspaceTool,
+} from "@/lib/workspace-areas";
+import { DepartmentIcon, destination } from "./WorkspaceAreas";
 export default function WorkspaceShell({
-  tabs,
+  tools,
   active,
-  onSelect,
+  activeDepartment,
+  activeTool,
+  onNavigate,
   email,
   role,
   busy,
   onSignout,
   children,
 }: {
-  tabs: string[][];
+  tools: WorkspaceTool[];
   active: string;
-  onSelect: (area: string) => boolean | void;
+  activeDepartment?: string;
+  activeTool?: string;
+  onNavigate: (target: Destination) => boolean | void;
   email: string;
   role: string;
   busy: boolean;
@@ -23,6 +33,21 @@ export default function WorkspaceShell({
     [mobileOpen, setMobileOpen] = useState(false),
     [mobile, setMobile] = useState(false),
     [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<string | undefined>(
+    activeDepartment,
+  );
+  useEffect(() => {
+    if (activeDepartment) setExpanded(activeDepartment);
+  }, [activeDepartment]);
+  const choose = (target: Destination) => {
+    if (onNavigate(target) === false) return;
+    setSearch("");
+    setMobileOpen(false);
+    if (mobile)
+      requestAnimationFrame(() =>
+        document.getElementById("workspace-main")?.focus(),
+      );
+  };
   const toggle = useRef<HTMLButtonElement>(null),
     navigation = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -162,41 +187,126 @@ export default function WorkspaceShell({
             </button>
           </div>
           <label className="field nav-search">
-            <span>Find a section</span>
+            <span>Find a tool</span>
             <input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search menu"
+              placeholder="Search workspace"
             />
           </label>
           <nav aria-label="Workspace sections">
-            {tabs
-              .filter(([, label]) =>
-                label.toLowerCase().includes(search.toLowerCase()),
-              )
-              .map(([area, label]) => (
-                <button
-                  key={area}
-                  aria-current={active === area ? "page" : undefined}
-                  onClick={() => {
-                    if (area !== active && onSelect(area) === false) return;
-                    setSearch("");
-                    setMobileOpen(false);
-                    if (mobile)
-                      requestAnimationFrame(() =>
-                        document.getElementById("workspace-main")?.focus(),
-                      );
-                  }}
-                >
-                  {label}
-                  <span aria-hidden="true">{active === area ? "•" : "›"}</span>
-                </button>
-              ))}
+            {!search && (
+              <button
+                className="department-nav"
+                aria-current={active === "overview" ? "page" : undefined}
+                onClick={() => choose({ section: "overview" })}
+              >
+                <DepartmentIcon id="overview" />
+                <span>Dashboard</span>
+              </button>
+            )}
+            {departments.map((d) => {
+              const entries = tools.filter((t) => t.department === d.id);
+              const matches = entries.filter((t) =>
+                (d.label + " " + t.label + " " + t.description)
+                  .toLowerCase()
+                  .includes(search.toLowerCase()),
+              );
+              if (!entries.length || (search && !matches.length)) return null;
+              const isOpen = !!search || expanded === d.id;
+              return (
+                <div className="department-nav-group" key={d.id}>
+                  <div
+                    className="department-nav-row"
+                    data-active={activeDepartment === d.id}
+                  >
+                    <button
+                      className="department-nav"
+                      aria-current={active === d.id ? "page" : undefined}
+                      onClick={() => {
+                        setExpanded(d.id);
+                        choose({ section: d.id });
+                      }}
+                    >
+                      <DepartmentIcon id={d.id} />
+                      <span>{d.label}</span>
+                    </button>
+                    <button
+                      className="department-expand"
+                      aria-label={(isOpen ? "Collapse " : "Expand ") + d.label}
+                      aria-expanded={isOpen}
+                      aria-controls={"department-" + d.id}
+                      onClick={() => setExpanded(isOpen ? undefined : d.id)}
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        aria-hidden="true"
+                      >
+                        <path d={isOpen ? "m6 15 6-6 6 6" : "m6 9 6 6 6-6"} />
+                      </svg>
+                    </button>
+                  </div>
+                  <div
+                    className="department-subnav"
+                    id={"department-" + d.id}
+                    hidden={!isOpen}
+                  >
+                    {matches.map((t) => (
+                      <button
+                        key={t.id}
+                        title={t.description}
+                        aria-current={activeTool === t.id ? "page" : undefined}
+                        onClick={() => choose(destination(t))}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+            {search &&
+              !tools.some((t) =>
+                (
+                  t.label +
+                  " " +
+                  t.description +
+                  " " +
+                  departments.find((d) => d.id === t.department)?.label
+                )
+                  .toLowerCase()
+                  .includes(search.toLowerCase()),
+              ) && (
+                <p role="status">
+                  No tools match. Try payments, customers or website.
+                </p>
+              )}
+            <button
+              className="department-nav account-nav"
+              aria-current={active === "account" ? "page" : undefined}
+              onClick={() => choose({ section: "account" })}
+            >
+              <svg
+                width="21"
+                height="21"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.65"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 21v-2a8 8 0 0 1 16 0v2" />
+              </svg>
+              <span>My account</span>
+            </button>
           </nav>
-          {!tabs.some(([, label]) =>
-            label.toLowerCase().includes(search.toLowerCase()),
-          ) && <p role="status">No sections match your search.</p>}
           <a href="https://luteratech.com" target="_blank" rel="noreferrer">
             View public website ↗
           </a>

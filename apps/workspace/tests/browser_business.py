@@ -29,6 +29,11 @@ def fixture(route):
  if action=='business/save':
   assert body['request_key'];c={**body['data'],'id':cid,'version':body['version']+1};rows['customers']=[c];return reply(c)
  if action=='business/file':assert body['data'];return reply({'id':'c2fddfaa-ed8d-41df-a918-e0c698afdb1d'})
+ if action=='business/misc':
+  assert body['action']=='grant' and body['email']=='colleague@example.invalid'
+  assert body['area']=='finance' and body['scope']=='assigned'
+  assert body['write_access'] is True and body['approve_access'] is False
+  rows['grants']=[body];return reply({'success':True})
  if action=='business/payment':
   assert body['data']['confirmed'] is True and body['data']['evidence_id'];rows['payments']=[{'id':str(uuid.uuid4()),**body['data'],'status':'confirmed','version':1}];return reply(rows['payments'][0])
  if action=='operations/list':
@@ -46,6 +51,16 @@ def fixture(route):
  if action=='portal/session':return reply({'email':'ui@example.invalid','customers':[{'id':cid,'name':'UI business fixture'}],'documents':[],'work':[]})
  return reply({'error':'Fixture endpoint not implemented: '+action},400)
 
+
+def go(page,department,tool=None):
+ page.locator('.workspace').wait_for()
+ sidebar=page.locator('#workspace-navigation')
+ if not sidebar.is_visible():page.get_by_role('button',name='Open workspace menu',exact=True).click()
+ sidebar.get_by_role('button',name=department,exact=True).click()
+ if tool:
+  if not sidebar.is_visible():page.get_by_role('button',name='Open workspace menu',exact=True).click()
+  sidebar.get_by_role('button',name=tool,exact=True).click()
+
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path=shutil.which('chromium') or None,headless=True,args=['--no-sandbox'])
  c=b.new_context(viewport={'width':1280,'height':1000});page=c.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
@@ -55,17 +70,21 @@ with sync_playwright() as p:
  assert c.request.post(origin+'/api/portal/ticket',data={},headers={'Origin':'https://evil.example'}).status==400
  c.route('**/api/**',fixture)
  page.goto(origin+'/'+entry)
- page.get_by_role('button',name='Business operations',exact=True).click()
+ page.get_by_role('heading',name='Dashboard',exact=True).wait_for()
+ assert page.locator('.department-card').count()==7
+ assert page.locator('#workspace-navigation').evaluate("e=>getComputedStyle(e).backgroundColor")== 'rgb(52, 86, 255)'
+ page.screenshot(path=str(out/'departments-dashboard.png'),full_page=True)
+ go(page,'Sales & Customers','Customers')
 
  try: page.get_by_role('combobox').first.wait_for(timeout=5000)
  except Exception:
   print('Fixture calls:',calls);print('Page errors:',errors);print(page.locator('main').inner_text());raise
- page.get_by_role('button',name='New record +',exact=True).click()
+ page.get_by_role('button',name='Add a customer',exact=True).click()
  page.get_by_label(re.compile('Customer / organization name',re.I)).fill('UI business fixture updated')
  page.get_by_role('button',name='Save record',exact=True).click()
  page.get_by_text('Saved successfully.',exact=True).wait_for()
- page.get_by_role('combobox').first.select_option(label='Customer payments')
- page.get_by_role('button',name='New record +',exact=True).click()
+ go(page,'Finance','Payments & receipts')
+ page.get_by_role('button',name='Record a payment',exact=True).click()
  page.get_by_role('combobox',name='Customer',exact=True).select_option(cid)
  page.get_by_label(re.compile('Amount received',re.I)).fill('1200.50')
  page.get_by_role('checkbox').check()
@@ -100,17 +119,17 @@ with sync_playwright() as p:
  # Mobile navigation is a keyboard-accessible dropdown, not a horizontal strip.
  page.set_viewport_size({'width':390,'height':844});assert not page.locator('#workspace-navigation').is_visible()
  page.get_by_role('button',name='Open workspace menu',exact=True).click()
- expect(page.get_by_role('searchbox',name='Find a section')).to_be_focused()
+ expect(page.get_by_role('searchbox',name='Find a tool')).to_be_focused()
  page.locator('#workspace-navigation').get_by_role('button',name='Close workspace menu',exact=True).click()
  expect(page.get_by_role('button',name='Open workspace menu',exact=True)).to_be_focused()
  page.get_by_role('button',name='Open workspace menu',exact=True).click()
- page.get_by_role('button',name='Business operations',exact=True).click()
+ go(page,'Sales & Customers','Customers')
  expect(page.locator('#workspace-main')).to_be_focused()
  page.get_by_role('button',name='Open workspace menu',exact=True).click()
- page.get_by_role('searchbox',name='Find a section').fill('Operational controls')
- page.get_by_role('button',name='Operational controls',exact=True).click()
+ page.get_by_role('searchbox',name='Find a tool').fill('Stock locations')
+ page.locator('#workspace-navigation').get_by_role('button',name='Stock locations',exact=True).click()
  assert not page.locator('#workspace-navigation').is_visible()
- page.get_by_role('heading',name='Operational controls',exact=True).wait_for()
+ page.get_by_role('heading',name='Stock locations',exact=True,level=1).wait_for()
  try: page.get_by_label('Operational area',exact=True).select_option('locations',timeout=10000)
  except Exception:
   print('Fixture calls:',calls);print('Page errors:',errors);print(page.locator('main').inner_text());raise
@@ -130,31 +149,42 @@ with sync_playwright() as p:
   assert not check['violations'],[(x['id'],x['help']) for x in check['violations']]
   page.screenshot(path=str(out/f'workspace-controls-{width}.png'),full_page=True)
  page.set_viewport_size({'width':1280,'height':1000})
- page.get_by_role('button',name='Management reports',exact=True).click()
+ go(page,'Finance','Financial reports')
  page.get_by_role('heading',name='Order contribution estimates',exact=True).wait_for()
- page.get_by_role('button',name='Operations settings',exact=True).click()
+ go(page,'Administration','Operations settings')
  page.get_by_role('button',name='Save reminder settings',exact=True).wait_for()
+ go(page,'Administration','Business permissions')
+ page.get_by_role('button',name='Configure access',exact=True).click()
+ page.get_by_label('Approved staff email',exact=False).fill('colleague@example.invalid')
+ page.get_by_label('Business area',exact=False).select_option('finance')
+ page.get_by_label('Record scope',exact=False).select_option('assigned')
+ page.get_by_label('May create and edit records',exact=False).check()
+ page.get_by_role('button',name='Save access rules',exact=True).click()
+ page.get_by_text('Business permissions saved.',exact=True).wait_for()
+ page.get_by_role('cell',name='colleague@example.invalid',exact=True).wait_for()
  # New navigation history: module/list/record restoration, native browser controls,
  # cancelled unsaved navigation, branching, reload and blocked browser storage.
  nav=c.new_page();nav.set_viewport_size({'width':1280,'height':900})
  nav.goto(origin+'/'+entry+'?section=overview')
- nav.get_by_role('heading',name='Overview',exact=True).wait_for()
+ nav.get_by_role('heading',name='Dashboard',exact=True).wait_for()
  assert nav.get_by_role('button',name='Go back',exact=True).is_disabled()
  assert nav.get_by_role('button',name='Go forward',exact=True).is_disabled()
- nav.get_by_role('button',name='Business operations',exact=True).click()
- nav.get_by_role('combobox').first.select_option(label='Customer payments')
+ go(nav,'Sales & Customers','Customers')
+ go(nav,'Finance','Payments & receipts')
  nav.wait_for_url('**module=payments*')
+ nav.get_by_role('button',name='Go back',exact=True).click()
  nav.get_by_role('button',name='Go back',exact=True).click()
  nav.get_by_role('combobox').first.wait_for()
  nav.wait_for_function("new URLSearchParams(location.search).get('module')==='customers'")
  nav.get_by_role('button',name='Go forward',exact=True).click()
+ nav.get_by_role('button',name='Go forward',exact=True).click()
  nav.wait_for_function("new URLSearchParams(location.search).get('module')==='payments'")
- nav.go_back();nav.wait_for_function("new URLSearchParams(location.search).get('module')==='customers'")
+ nav.go_back();nav.go_back();nav.wait_for_function("new URLSearchParams(location.search).get('module')==='customers'")
  nav.get_by_role('button',name='Open',exact=True).first.click()
  nav.get_by_label(re.compile('Customer / organization name',re.I)).wait_for()
  nav.wait_for_function("id => new URLSearchParams(location.search).get('record')===id",arg=cid)
  nav.get_by_role('button',name='Go back',exact=True).click()
- nav.get_by_role('button',name='New record +',exact=True).wait_for()
+ nav.get_by_role('button',name='Add a customer',exact=True).wait_for()
  nav.go_forward()
  name=nav.get_by_label(re.compile('Customer / organization name',re.I));name.wait_for()
  name.fill('Unsaved navigation fixture')
@@ -164,31 +194,55 @@ with sync_playwright() as p:
  assert name.input_value()=='Unsaved navigation fixture'
  nav.once('dialog',lambda d:d.accept())
  nav.get_by_role('button',name='Go back',exact=True).click()
- nav.get_by_role('button',name='New record +',exact=True).wait_for()
- nav.get_by_role('button',name='Operational controls',exact=True).click()
- nav.get_by_label('Operational area',exact=True).select_option('locations')
+ nav.get_by_role('button',name='Add a customer',exact=True).wait_for()
+ go(nav,'Procurement & Inventory','Stock locations')
+ nav.get_by_label('Operational area',exact=True).select_option('stock_holds')
  nav.get_by_role('button',name='Go back',exact=True).click()
- nav.wait_for_function("new URLSearchParams(location.search).get('control')==='approval_rules'")
- nav.get_by_role('button',name='Go forward',exact=True).click()
  nav.wait_for_function("new URLSearchParams(location.search).get('control')==='locations'")
+ nav.get_by_role('button',name='Go forward',exact=True).click()
+ nav.wait_for_function("new URLSearchParams(location.search).get('control')==='stock_holds'")
  nav.reload();nav.get_by_label('Operational area',exact=True).wait_for()
- assert nav.get_by_label('Operational area',exact=True).input_value()=='locations'
+ assert nav.get_by_label('Operational area',exact=True).input_value()=='stock_holds'
  nav.get_by_role('button',name='Go back',exact=True).click()
- nav.wait_for_function("new URLSearchParams(location.search).get('control')==='approval_rules'")
- nav.get_by_role('button',name='Management reports',exact=True).click()
+ nav.wait_for_function("new URLSearchParams(location.search).get('control')==='locations'")
+ go(nav,'Finance','Financial reports')
  nav.get_by_role('heading',name='Order contribution estimates',exact=True).wait_for()
  assert nav.get_by_role('button',name='Go forward',exact=True).is_disabled()
  nav.close()
  limited=b.new_context(viewport={'width':1280,'height':900})
  limited.add_init_script("Object.defineProperty(window,'sessionStorage',{get(){throw Error('Storage disabled for test')}})")
  limited.route('**/api/**',fixture);n=limited.new_page();n.goto(origin+'/'+entry+'?section=overview')
- n.get_by_role('button',name='Operational controls',exact=True).click()
- n.get_by_label('Operational area',exact=True).select_option('locations')
+ go(n,'Procurement & Inventory','Stock locations')
+ n.get_by_label('Operational area',exact=True).select_option('stock_holds')
  n.get_by_role('button',name='Go back',exact=True).click()
- n.wait_for_function("new URLSearchParams(location.search).get('control')==='approval_rules'")
- n.get_by_role('button',name='Go forward',exact=True).click()
  n.wait_for_function("new URLSearchParams(location.search).get('control')==='locations'")
+ n.get_by_role('button',name='Go forward',exact=True).click()
+ n.wait_for_function("new URLSearchParams(location.search).get('control')==='stock_holds'")
  limited.close()
+ # A website editor has no business department unless an explicit business grant exists.
+ restricted=b.new_context(viewport={'width':390,'height':844})
+ def restricted_fixture(route):
+  action=route.request.url.split('/api/',1)[1].split('?')[0]
+  data=None
+  if action=='session':data={'email':'editor@example.invalid','role':'editor','verified':True,'factors':[]}
+  if action=='business/config':data={'owner':False,'me':uid,'people':[],'access':{a:{'read':False,'write':False,'approve':False} for a in conf['access']}}
+  if data is not None:return route.fulfill(status=200,content_type='application/json',body=json.dumps(data))
+  return fixture(route)
+ restricted.route('**/api/**',restricted_fixture)
+ r=restricted.new_page();r.goto(origin+'/'+entry)
+ r.get_by_role('heading',name='Dashboard',exact=True).wait_for()
+ assert r.locator('.department-card').count()==1
+ r.get_by_role('button',name='Open workspace menu',exact=True).click()
+ menu=r.locator('#workspace-navigation')
+ menu.get_by_role('button',name='Website cPanel',exact=True).wait_for()
+ assert menu.get_by_role('button',name='Finance',exact=True).count()==0
+ assert menu.get_by_role('button',name='Administration',exact=True).count()==0
+ assert menu.get_by_role('button',name='Sales & Customers',exact=True).count()==0
+ assert not r.get_by_role('heading',name='Your business at a glance',exact=True).count()
+ r.goto(origin+'/'+entry+'?section=finance')
+ r.get_by_text('Your account does not have access to this tool.',exact=False).wait_for()
+ assert not r.get_by_label('Customer name',exact=True).count()
+ restricted.close()
  page.goto(origin+'/portal');page.get_by_role('heading',name='UI business fixture',exact=True).wait_for()
  assert not errors,errors
  b.close()

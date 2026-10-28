@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   documentSchema,
   minor,
@@ -44,8 +44,10 @@ export default function Documents({
   settings,
   refresh,
   initialId,
+  focusKind,
 }: {
   initialId?: string;
+  focusKind?: DocumentInput["kind"];
   records: BusinessDocument[];
   settings: Settings;
   refresh: () => Promise<void>;
@@ -53,7 +55,7 @@ export default function Documents({
   const [selected, setSelected] = useState<BusinessDocument | null | undefined>(
       undefined,
     ),
-    [kind, setKind] = useState<DocumentInput["kind"]>("quotation"),
+    [kind, setKind] = useState<DocumentInput["kind"]>(focusKind || "quotation"),
     [search, setSearch] = useState(""),
     [filter, setFilter] = useState("all"),
     [searchBy, setSearchBy] = useState<"name" | "number">("name");
@@ -92,15 +94,23 @@ export default function Documents({
     if (!restored) return;
     const id = selected === null ? "new" : selected?.id;
     workspaceLocation(
-      { document: id || null, documentKind: selected === null ? kind : null },
+      {
+        document: id || null,
+        documentKind: focusKind || (selected === null ? kind : null),
+      },
       !locationReady.current || (previous.current === "new" && !!selected),
     );
     previous.current = id;
     locationReady.current = true;
-  }, [selected, kind, restored]);
+  }, [selected, kind, restored, focusKind]);
+  const initialRecords = useMemo(
+    () => (focusKind ? records.filter((r) => r.kind === focusKind) : records),
+    [records, focusKind],
+  );
   const listing = useRecords({
     area: "finance",
-    initial: records,
+    initial: initialRecords,
+    kind: focusKind,
     query: search,
     field: search.toUpperCase().startsWith("LUT-") ? "number" : searchBy,
     status: filter,
@@ -138,25 +148,49 @@ export default function Documents({
     <>
       <section className="panel toolbar">
         <div>
-          <h2>Quotations, pro formas & receipts</h2>
+          <h2>
+            {focusKind
+              ? {
+                  quotation: "Quotation documents",
+                  proforma: "Pro forma invoices",
+                  receipt: "Receipt documents",
+                }[focusKind]
+              : "Quotations, pro formas & receipts"}
+          </h2>
           <p>
-            Prepare a draft, review its details, then issue a numbered record.
+            {focusKind === "receipt"
+              ? "Find original receipts here. Record new money received through Finance → Payments & receipts."
+              : "Prepare the draft, review the details, then issue and export the document."}
           </p>
         </div>
         <div className="actions">
-          <label className="sr-only" htmlFor="new-kind">
-            New document type
-          </label>
-          <select
-            id="new-kind"
-            value={kind}
-            onChange={(e) => setKind(e.target.value as DocumentInput["kind"])}
-          >
-            <option value="quotation">Quotation</option>
-            <option value="proforma">Pro forma invoice</option>
-            <option value="receipt">Payment receipt</option>
-          </select>
-          <button onClick={() => setSelected(null)}>New document +</button>
+          {!focusKind && (
+            <>
+              <label className="sr-only" htmlFor="new-kind">
+                New document type
+              </label>
+              <select
+                id="new-kind"
+                value={kind}
+                onChange={(e) =>
+                  setKind(e.target.value as DocumentInput["kind"])
+                }
+              >
+                <option value="quotation">Quotation</option>
+                <option value="proforma">Pro forma invoice</option>
+                <option value="receipt">Payment receipt</option>
+              </select>
+            </>
+          )}
+          {focusKind !== "receipt" && (
+            <button onClick={() => setSelected(null)}>
+              {focusKind === "quotation"
+                ? "Prepare a quotation"
+                : focusKind === "proforma"
+                  ? "Prepare a pro forma"
+                  : "New document +"}
+            </button>
+          )}
         </div>
       </section>
       <section className="panel">

@@ -56,6 +56,15 @@ export function workspaceLocation(
     if (value === null) url.searchParams.delete(key);
     else url.searchParams.set(key, value);
   }
+  if (
+    !("tool" in values) &&
+    ["module", "kind", "control", "editor"].some(
+      (k) =>
+        k in values &&
+        url.searchParams.get(k) !== new URLSearchParams(location.search).get(k),
+    )
+  )
+    url.searchParams.delete("tool");
   if (url.search === location.search) return;
   const current = initialize();
   const next = { ...current, index: current.index + (replace ? 0 : 1) };

@@ -435,7 +435,7 @@ export function Reference({
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search records…"
+        placeholder="Search by name, number or reference…"
         aria-controls={id}
       />
       <select
@@ -686,33 +686,51 @@ export function Fields({
   );
 }
 export function Summary({ row }: { row: Row }) {
+  const entries = Object.entries(row).filter(
+    ([k, v]) =>
+      !["id", "version", "snapshot", "request_key", "sha256", "path"].includes(
+        k,
+      ) &&
+      v !== null &&
+      v !== "" &&
+      typeof v !== "object",
+  );
+  const references = entries.filter(
+    ([k]) => k.endsWith("_id") || k === "created_by" || k === "assigned_to",
+  );
   return (
-    <dl className="record-summary">
-      {Object.entries(row)
-        .filter(
-          ([k, v]) =>
-            ![
-              "id",
-              "version",
-              "snapshot",
-              "request_key",
-              "sha256",
-              "path",
-            ].includes(k) &&
-            v !== null &&
-            v !== "" &&
-            typeof v !== "object",
-        )
-        .map(([k, v]) => (
-          <div key={k}>
-            <dt>{k.replaceAll("_", " ")}</dt>
-            <dd>
-              {k.endsWith("_minor")
-                ? money(Number(v), String(row.currency || "NGN"))
-                : String(v)}
-            </dd>
-          </div>
-        ))}
-    </dl>
+    <>
+      <dl className="record-summary">
+        {entries
+          .filter(([k]) => !references.some(([r]) => r === k))
+          .map(([k, v]) => (
+            <div key={k}>
+              <dt>{k.replaceAll("_", " ")}</dt>
+              <dd>
+                {k.endsWith("_minor")
+                  ? money(Number(v), String(row.currency || "NGN"))
+                  : typeof v === "boolean"
+                    ? v
+                      ? "Yes"
+                      : "No"
+                    : String(v)}
+              </dd>
+            </div>
+          ))}
+      </dl>
+      {references.length > 0 && (
+        <details className="record-references">
+          <summary>Linked record references</summary>
+          <dl className="record-summary">
+            {references.map(([k, v]) => (
+              <div key={k}>
+                <dt>{k.replaceAll("_", " ")}</dt>
+                <dd>{String(v)}</dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+      )}
+    </>
   );
 }

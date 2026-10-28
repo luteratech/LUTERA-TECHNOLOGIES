@@ -624,6 +624,7 @@ export async function POST(
       const body = z
         .object({
           area: z.enum(["finance", "staff"]),
+          kind: z.enum(["quotation", "proforma", "receipt"]).optional(),
           query: z.string().trim().max(100),
           field: z.enum(["name", "number", "title"]),
           status: z.enum(["all", "draft", "issued", "void"]),
@@ -657,6 +658,8 @@ export async function POST(
       }
       if (body.area === "finance" && body.status !== "all")
         query = query.eq("status", body.status);
+      if (body.area === "finance" && body.kind)
+        query = query.eq("kind", body.kind);
       const rows = check(await query);
       return ok({ rows: rows.slice(0, 50), more: rows.length > 50 });
     }
