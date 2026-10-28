@@ -23,7 +23,8 @@ this path. No service-role key is needed or accepted by the app.
 
 ## Workspace navigation
 
-The header has Back/Forward controls with unavailable directions disabled and a
+The page body starts with icon-only Back/Forward controls at the top left, with
+unavailable directions disabled and a
 breadcrumb linking to the overview. Section changes, business modules/records,
 operational areas and document views use browser history on the existing private
 route. Browser Back/Forward also restore these views; record access is checked

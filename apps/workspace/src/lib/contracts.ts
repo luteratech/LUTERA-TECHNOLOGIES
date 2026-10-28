@@ -71,6 +71,7 @@ export const companySchema = z
     registration_completed: z.boolean(),
     registration_number: text(80),
     email: z.email().max(254),
+    support_email: z.email().max(254).optional(),
     phone: z.string().regex(/^\+[1-9][0-9]{7,14}$/),
     display_phone: required(40),
     whatsapp: https.max(200),

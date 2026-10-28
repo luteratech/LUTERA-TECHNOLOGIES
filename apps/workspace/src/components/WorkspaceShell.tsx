@@ -8,10 +8,6 @@ export default function WorkspaceShell({
   role,
   busy,
   onSignout,
-  canBack,
-  canForward,
-  onBack,
-  onForward,
   children,
 }: {
   tabs: string[][];
@@ -21,10 +17,6 @@ export default function WorkspaceShell({
   role: string;
   busy: boolean;
   onSignout: () => void;
-  canBack: boolean;
-  canForward: boolean;
-  onBack: () => void;
-  onForward: () => void;
   children: ReactNode;
 }) {
   const [desktopOpen, setDesktopOpen] = useState(true),
@@ -130,54 +122,6 @@ export default function WorkspaceShell({
           height="40"
         />
         <span className="private-label">Business workspace</span>
-        <div
-          className="workspace-history"
-          role="group"
-          aria-label="Page history"
-        >
-          <button
-            className="secondary"
-            type="button"
-            aria-label="Go back"
-            title="Go back"
-            disabled={!canBack}
-            onClick={onBack}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="18"
-              height="18"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              aria-hidden="true"
-            >
-              <path d="m14 6-6 6 6 6" />
-            </svg>
-            <span>Back</span>
-          </button>
-          <button
-            className="secondary"
-            type="button"
-            aria-label="Go forward"
-            title="Go forward"
-            disabled={!canForward}
-            onClick={onForward}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="18"
-              height="18"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              aria-hidden="true"
-            >
-              <path d="m10 6 6 6-6 6" />
-            </svg>
-            <span>Forward</span>
-          </button>
-        </div>
         <div className="account">
           <span className="account-email" title={email}>
             {email}

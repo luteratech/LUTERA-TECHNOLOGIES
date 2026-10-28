@@ -59,7 +59,7 @@ export async function dispatchPortalMail() {
         },
         body: JSON.stringify({
           from: "Lutera Technology Ltd <business@mail.luteratech.com>",
-          reply_to: "chimaster010@gmail.com",
+          reply_to: "support@luteratech.com",
           to: [m.email],
           subject: "Sign in to your Lutera customer portal",
           text: body,

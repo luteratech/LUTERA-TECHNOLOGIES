@@ -12,10 +12,10 @@
     "legal_name": "Lutera Technology Ltd",
     "registration_completed": true,
     "registration_number": "",
-    "email": "chimaster010@gmail.com",
+    "email": "info@luteratech.com",
     "phone": "+2349026276130",
     "display_phone": "+234 902 6276 130",
-    "whatsapp": "https://wa.me/2349026276130",
+    "whatsapp": "https://wa.me/2349016387916",
     "street_address": "No. 7, Mahatma Gandhi Street, Area 11, Garki",
     "city": "Abuja",
     "state": "FCT",
@@ -23,7 +23,8 @@
     "lga": "AMAC (Abuja Municipal Area Council)",
     "house_number": "No. 7",
     "nature_of_business": "Information Technology and Artificial Intelligence (AI) Solutions; Technology Consultancy and IT Consulting Services; AI Agent Development and Business Process Automation; Software Design, Development and Implementation; Data Analytics; Systems Integration; Cloud-Based Solutions; Procurement, Importation, Exportation, Wholesale and Retail Supply of Computer Hardware, Accessories and Peripherals; Computer Installation, Maintenance and Technical Support; and Related Technology Services.",
-    "brand_name": "Lutera"
+    "brand_name": "Lutera",
+    "support_email": "support@luteratech.com"
   },
   "services": [
     {

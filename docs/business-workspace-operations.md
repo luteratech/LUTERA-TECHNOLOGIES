@@ -75,7 +75,7 @@ can receive a sign-in link.
    line to an already recorded payment; importing a bank file cannot issue a
    receipt or initiate payment.
 7. **Communication / portal:** use recorded customer contacts, approved issued
-   attachments and the monitored reply address `chimaster010@gmail.com`. Messages
+   attachments and the monitored reply address `info@luteratech.com`. Messages
    have queued/provider-accepted/delivered/failed/bounced states. Delivery is not
    acceptance. Sender permissions, recipient membership, document state and
    reminder eligibility are checked again at dispatch. Revoked memberships and
@@ -189,10 +189,10 @@ policies, not a provider-level Auth disaster recovery exercise.
 ## Remaining owner/provider configuration
 
 - Install/authorize the company Drive trigger and retain the recovery key.
-- `PUBLIC_SITE_DEPLOY_HOOK` was not present in the last environment-key check.
-  Save the actual public-project hook URL in the private project's Production
-  environment and redeploy before expecting workspace website publishing to
-  trigger a build. A deploy-job JSON response is not the hook URL.
+- `PUBLIC_SITE_DEPLOY_HOOK` is now present in the private project's Production
+  environment. Verify a signed-in draft → Publish → live revision during the
+  company acceptance pilot; environment presence alone does not prove the hook
+  points to the intended project.
 - Complete an owner-signed-in operational pilot with real approved company
   details, opening balances, stock locations and service commitments. Automated
   external invoice reminders start disabled until the owner enables them.

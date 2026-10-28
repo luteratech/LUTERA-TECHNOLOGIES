@@ -179,7 +179,7 @@ export default function EmailConfirmation({
           </>
         )}
         <p className="muted">
-          Need help? <a href="mailto:chimaster010@gmail.com">Contact Lutera</a>{" "}
+          Need help? <a href="mailto:support@luteratech.com">Contact Lutera</a>{" "}
           or visit <a href="https://luteratech.com">luteratech.com</a>.
         </p>
       </section>

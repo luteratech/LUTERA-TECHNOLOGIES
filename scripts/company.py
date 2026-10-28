@@ -1,12 +1,17 @@
 """Shared public content. The future workspace can import this data contract."""
 from pathlib import Path
 from html import escape
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 import json
 
 SITE = json.loads((Path(__file__).resolve().parents[1] / 'content/site.json').read_text())
 COMPANY = SITE['company']
 SERVICES = SITE['services']
+SUPPORT_EMAIL = COMPANY.get('support_email', COMPANY['email'])
+_whatsapp = urlsplit(COMPANY['whatsapp'])
+_digits = _whatsapp.path.strip('/') if _whatsapp.hostname == 'wa.me' else ''
+WHATSAPP_PHONE = '+' + _digits if _digits.isdigit() else ''
+WHATSAPP_DISPLAY_PHONE = ('+234 ' + _digits[3:6] + ' ' + _digits[6:9] + ' ' + _digits[9:]) if _digits.startswith('234') and len(_digits) == 13 else WHATSAPP_PHONE
 STREET_ADDRESS = COMPANY['street_address']
 CITY, STATE = COMPANY['city'], COMPANY['state']
 ADDRESS = f'{STREET_ADDRESS}, {CITY}, {STATE}, Nigeria'

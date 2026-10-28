@@ -124,7 +124,7 @@ export async function dispatchBusinessMail() {
             },
             body: JSON.stringify({
               from: "Lutera Technology Ltd <business@mail.luteratech.com>",
-              reply_to: "chimaster010@gmail.com",
+              reply_to: "info@luteratech.com",
               to: [m.recipient],
               subject: m.subject,
               text: m.body,

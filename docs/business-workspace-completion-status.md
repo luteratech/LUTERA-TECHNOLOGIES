@@ -81,9 +81,10 @@ emails are required by these checks.
    described in the [operations runbook](business-workspace-operations.md#encrypted-backups-supabase-then-google-drive).
    The user confirmed this is not installed. Supabase is the primary private
    encrypted backup destination; unattended Drive copies need this authorization.
-2. **Website publishing hook:** provide `PUBLIC_SITE_DEPLOY_HOOK` in the private
-   project's production environment if still absent, then redeploy. A saved
-   website revision is distinct from a live public deployment.
+2. **Website publishing hook:** confirmed present in the private project's
+   production environment on 27 October. The contact/navigation release deploys
+   with this setting. A signed-in draft → Publish → live-revision acceptance
+   check remains part of the company pilot; saving is distinct from publication.
 3. **Malware service:** the private ClamAV INSTREAM adapter is implemented and
    tested. A company-controlled scanner endpoint must be configured using
    `CLAMAV_HOST`, optional `CLAMAV_PORT` and `CLAMAV_TLS`. A configured scanner

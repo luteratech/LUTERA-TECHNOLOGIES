@@ -8,7 +8,10 @@ public website remains **https://luteratech.com**.
 
 The sending domain **mail.luteratech.com** is verified in the connected Resend
 account. Click/open tracking is disabled. Receiving is not enabled; the email
-body links to the existing monitored `chimaster010@gmail.com` inbox for support.
+prepared template bodies link to `support@luteratech.com` for help. General
+website enquiries and business replies use `info@luteratech.com`; the receiving
+domain has Zoho MX records. Reapply the generated templates to hosted Supabase
+Auth to update templates previously pasted into its dashboard.
 These changes do not move or replace the company's existing mailboxes.
 
 The 13 templates, subjects and non-secret Auth configuration are prepared here.

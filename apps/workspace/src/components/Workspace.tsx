@@ -269,16 +269,59 @@ export default function Workspace() {
       tabs={tabs}
       active={tab}
       onSelect={goToSection}
-      canBack={navigation.back}
-      canForward={navigation.forward}
-      onBack={() => navigation.go(-1)}
-      onForward={() => navigation.go(1)}
       email={session.email}
       role={session.role}
       busy={busy}
       onSignout={signout}
     >
       <main id="workspace-main" tabIndex={-1}>
+        <div
+          className="workspace-history"
+          role="group"
+          aria-label="Page history"
+        >
+          <button
+            className="secondary"
+            type="button"
+            aria-label="Go back"
+            title="Go back"
+            disabled={!navigation.back}
+            onClick={() => navigation.go(-1)}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              aria-hidden="true"
+            >
+              <path d="M19 12H5m6-6-6 6 6 6" />
+            </svg>
+          </button>
+          <button
+            className="secondary"
+            type="button"
+            aria-label="Go forward"
+            title="Go forward"
+            disabled={!navigation.forward}
+            onClick={() => navigation.go(1)}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              aria-hidden="true"
+            >
+              <path d="M5 12h14m-6-6 6 6-6 6" />
+            </svg>
+          </button>
+        </div>
+
         <nav className="workspace-breadcrumb" aria-label="Breadcrumb">
           <button
             type="button"

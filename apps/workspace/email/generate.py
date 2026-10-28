@@ -43,7 +43,7 @@ def email(title, body, action='', kind=None, otp=False, notification=False):
 <p style="font-size:16px;line-height:1.75;margin:0 0 24px">{body}</p>{button}
 <p style="font-size:14px;line-height:1.7;color:#525B75;margin-top:24px">{'This link or code is single-use and expires according to the account security settings. ' if not notification else ''}{safety}</p>
 <p style="font-size:16px;line-height:1.7;margin:24px 0 0">The Lutera team<br /><span style="color:#525B75;font-size:14px">Supply. Build. Connect.</span></p></td></tr>
-<tr><td style="padding:24px 28px;border-top:1px solid #D7DAE4;background:#FAFAF8"><p style="font-size:13px;line-height:1.7;color:#525B75;margin:0"><strong>{COMPANY}</strong><br />No. 7, Mahatma Gandhi Street, Area 11, Garki, Abuja, FCT, Nigeria<br /><a href="https://luteratech.com" style="color:#2340D0">luteratech.com</a> &nbsp;·&nbsp; <a href="mailto:chimaster010@gmail.com" style="color:#2340D0">Contact Lutera</a></p></td></tr>
+<tr><td style="padding:24px 28px;border-top:1px solid #D7DAE4;background:#FAFAF8"><p style="font-size:13px;line-height:1.7;color:#525B75;margin:0"><strong>{COMPANY}</strong><br />No. 7, Mahatma Gandhi Street, Area 11, Garki, Abuja, FCT, Nigeria<br /><a href="https://luteratech.com" style="color:#2340D0">luteratech.com</a> &nbsp;·&nbsp; <a href="mailto:support@luteratech.com" style="color:#2340D0">Contact Lutera</a></p></td></tr>
 </table></td></tr></table></body></html>
 '''
 

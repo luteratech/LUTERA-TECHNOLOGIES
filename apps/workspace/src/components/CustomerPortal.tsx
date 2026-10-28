@@ -440,7 +440,7 @@ export default function CustomerPortal() {
           <section className="panel">
             <h2>Need help?</h2>
             <p>
-              Contact <a href="mailto:chimaster010@gmail.com">Lutera</a> for
+              Contact <a href="mailto:support@luteratech.com">Lutera</a> for
               project updates, document corrections or support.
             </p>
           </section>

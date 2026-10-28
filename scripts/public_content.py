@@ -28,11 +28,13 @@ def validate(site):
     require(isinstance(site, dict) and set(site) <= {'hosting','company','services','commitments','socials'} and {'hosting','company','services','commitments'} <= set(site), 'Invalid public content fields')
     require(site['hosting']['production_origin'] == 'https://luteratech.com', 'The primary domain must remain luteratech.com')
     c = site['company']
-    require(isinstance(c, dict) and set(c) == COMPANY_FIELDS, 'Invalid company fields')
+    require(isinstance(c, dict) and COMPANY_FIELDS <= set(c) <= COMPANY_FIELDS | {'support_email'}, 'Invalid company fields')
     require(all(string(v, 4000) for k,v in c.items() if k != 'registration_completed'), 'Invalid company text')
     require(isinstance(c['registration_completed'], bool), 'Invalid registration status')
     require(all(string(c[k], 250, 1) for k in ['name','legal_name','brand_name','street_address','city','state','display_phone']), 'Company identity fields are required')
     require(bool(re.fullmatch(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+",c['email'])), 'Invalid company email')
+    if 'support_email' in c:
+        require(bool(re.fullmatch(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+", c['support_email'])), 'Invalid support email')
     require(bool(re.fullmatch(r'\+[1-9][0-9]{7,14}',c['phone'])), 'Invalid phone number')
     require(bool(re.fullmatch(r'[A-Z]{2}',c['country'])) and https(c['whatsapp']), 'Invalid contact information')
     services = site['services']

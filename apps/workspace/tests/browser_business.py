@@ -3,7 +3,7 @@ import os
 import base64,json,re,shutil,uuid
 from pathlib import Path
 from urllib.parse import urlparse,parse_qs
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
 root=Path(__file__).resolve().parents[1]
 v=dict(l.split('=',1) for l in (root/'.env.local').read_text().splitlines() if l and not l.startswith('#'))
 origin=os.environ.get('LUTERA_TEST_URL',v['WORKSPACE_ORIGIN']);entry=v['WORKSPACE_ENTRY'];out=root/'test-results';out.mkdir(exist_ok=True)
@@ -85,6 +85,9 @@ with sync_playwright() as p:
  page.get_by_role('button',name='Confirm payment and issue receipt',exact=True).click()
  page.get_by_text('Payment recorded with evidence',exact=False).wait_for()
  assert rows['payments'][0]['amount_minor']==120050
+ assert page.locator('header').get_by_role('group',name='Page history').count()==0
+ assert page.locator('#workspace-main').get_by_role('group',name='Page history').count()==1
+ assert page.get_by_role('button',name='Go back',exact=True).locator('span').count()==0
  # Desktop/tablet sidebar can collapse, returns width to content and remembers the preference.
  for width in [768,1024,1280]:
   page.set_viewport_size({'width':width,'height':900})
@@ -97,12 +100,12 @@ with sync_playwright() as p:
  # Mobile navigation is a keyboard-accessible dropdown, not a horizontal strip.
  page.set_viewport_size({'width':390,'height':844});assert not page.locator('#workspace-navigation').is_visible()
  page.get_by_role('button',name='Open workspace menu',exact=True).click()
- assert page.get_by_role('searchbox',name='Find a section').evaluate('(el)=>el===document.activeElement')
+ expect(page.get_by_role('searchbox',name='Find a section')).to_be_focused()
  page.locator('#workspace-navigation').get_by_role('button',name='Close workspace menu',exact=True).click()
- assert page.get_by_role('button',name='Open workspace menu',exact=True).evaluate('(el)=>el===document.activeElement')
+ expect(page.get_by_role('button',name='Open workspace menu',exact=True)).to_be_focused()
  page.get_by_role('button',name='Open workspace menu',exact=True).click()
  page.get_by_role('button',name='Business operations',exact=True).click()
- assert page.locator('#workspace-main').evaluate('(el)=>el===document.activeElement')
+ expect(page.locator('#workspace-main')).to_be_focused()
  page.get_by_role('button',name='Open workspace menu',exact=True).click()
  page.get_by_role('searchbox',name='Find a section').fill('Operational controls')
  page.get_by_role('button',name='Operational controls',exact=True).click()
@@ -118,7 +121,7 @@ with sync_playwright() as p:
  assert len(ops_rows['locations'])==1
  page.get_by_role('button',name='Open workspace menu',exact=True).click()
  page.keyboard.press('Escape');assert not page.locator('#workspace-navigation').is_visible()
- assert page.get_by_role('button',name='Open workspace menu',exact=True).evaluate('(el)=>el===document.activeElement')
+ expect(page.get_by_role('button',name='Open workspace menu',exact=True)).to_be_focused()
  for width in [320,390,600,768,1024,1280]:
   page.set_viewport_size({'width':width,'height':900})
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),width
