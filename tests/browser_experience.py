@@ -5,6 +5,7 @@ from http.server import ThreadingHTTPServer,SimpleHTTPRequestHandler
 from functools import partial
 from urllib.parse import parse_qs,urlsplit
 ROOT=Path(os.environ.get('LUTERA_TEST_DIR',Path(__file__).resolve().parents[1]/'_site')).resolve()
+CONTACT=json.loads((Path(__file__).resolve().parents[1]/'content/site.json').read_text())['company']
 class Handler(SimpleHTTPRequestHandler):
  def translate_path(self,path):return super().translate_path(path.removeprefix('/LUTERA-TECHNOLOGIES'))
  def log_message(self,*args):pass
@@ -137,7 +138,7 @@ with sync_playwright() as p:
    assert toggle.is_visible() and not options.is_visible()
    rect=toggle.bounding_box();assert rect['x']>width/2 and rect['y']>750,(width,route,rect)
    toggle.click();assert options.is_visible()
-   assert q.get_by_role('link',name='WhatsApp chat',exact=False).last.get_attribute('href')=='https://wa.me/2349026276130'
+   assert q.get_by_role('link',name='WhatsApp chat',exact=False).last.get_attribute('href')==CONTACT['whatsapp']
    assert q.evaluate('document.documentElement.scrollWidth<=innerWidth'),(width,route,'expanded contact')
    q.keyboard.press('Escape');assert not options.is_visible()
    assert toggle.evaluate('(el)=>el===document.activeElement')
