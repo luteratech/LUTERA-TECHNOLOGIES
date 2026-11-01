@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { documentSignatures } from "@/lib/signatures";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
@@ -981,7 +982,7 @@ export async function POST(
             .eq("id", body.id)
             .single(),
         ) as BusinessDocument;
-        bytes = await financialExport(doc, settings, body.format);
+        bytes = await financialExport(doc, settings, body.format, await documentSignatures(db,"work_documents",doc.id));
         name = doc.number || `draft-${doc.id}`;
       } else {
         const staff = check(

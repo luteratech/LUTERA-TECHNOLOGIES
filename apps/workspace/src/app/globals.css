@@ -2471,3 +2471,49 @@ dialog .actions {
       box-shadow 0.16s;
   }
 }
+
+.signature-preview,
+.signature-record img {
+  display: block;
+  width: min(100%, 320px);
+  max-height: 140px;
+  object-fit: contain;
+  object-position: left;
+  background: white;
+  border: 1px solid var(--line);
+  padding: 12px;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+.signature-record {
+  border: 1px solid var(--line);
+  padding: 20px;
+  border-radius: 10px;
+  margin: 16px 0;
+  overflow-wrap: anywhere;
+}
+.signature-record small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+}
+.journal-line {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+  margin: 18px 0;
+}
+.journal-line legend {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 6px;
+}
+@media (max-width: 767px) {
+  .signature-record,
+  .journal-line {
+    padding: 14px;
+  }
+  .signature-record img {
+    max-height: 100px;
+  }
+}

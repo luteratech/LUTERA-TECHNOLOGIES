@@ -22,6 +22,8 @@ docker exec -i "$container" psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 < t
 
 docker exec -i "$container" psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 < tests/completion-access.sql
 
+docker exec -i "$container" psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 < tests/suite-access.sql
+
 # A full business-record round trip in a second, fresh database. Source data is
 # synthetic; no production credentials, users or attachments enter this test.
 restore_tmp="$(mktemp -d)"

@@ -47,6 +47,7 @@ type MailJob = {
   document?: Record<string, unknown>;
   legacy?: BusinessDocument;
   statement_snapshot?: StatementSnapshot;
+  approvals?: import("./suite").DocumentSignature[];
   lines?: { description: string; quantity: number; unit_minor: number }[];
 };
 export async function dispatchBusinessMail() {
@@ -98,7 +99,12 @@ export async function dispatchBusinessMail() {
               company: snap.company,
             };
             const doc = { ...r, payload } as unknown as BusinessDocument;
-            const bytes = await financialExport(doc, snap.company, "pdf");
+            const bytes = await financialExport(
+              doc,
+              snap.company,
+              "pdf",
+              m.approvals,
+            );
             attachments.push({
               filename: String(r.number) + ".pdf",
               content: bytes.toString("base64"),
@@ -109,6 +115,7 @@ export async function dispatchBusinessMail() {
               m.legacy,
               m.legacy.payload.company!,
               "pdf",
+              m.approvals,
             );
             attachments.push({
               filename: String(m.legacy.number) + ".pdf",

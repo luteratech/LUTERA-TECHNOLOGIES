@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import UserResponsibilities from "./UserResponsibilities";
 import { api } from "@/lib/client";
 import { EntryForm, type BusinessConfig } from "./BusinessWorkspace";
 import { field } from "./business-fields";
@@ -63,60 +64,65 @@ export default function BusinessAccess({
       />
     );
   return (
-    <section className="panel">
-      <div className="toolbar">
-        <div>
-          <h2>Business permissions</h2>
-          <p>
-            Choose the areas each colleague can use. Limit access to assigned
-            records where appropriate; approval rights are separate from
-            editing.
+    <>
+      <UserResponsibilities />
+      <section className="panel">
+        <div className="toolbar">
+          <div>
+            <h2>Business permissions</h2>
+            <p>
+              Choose the areas each colleague can use. Limit access to assigned
+              records where appropriate; approval rights are separate from
+              editing.
+            </p>
+          </div>
+          <button onClick={() => setEditing(true)}>Configure access</button>
+        </div>
+        {error && (
+          <p role="alert" className="error">
+            {error}
           </p>
-        </div>
-        <button onClick={() => setEditing(true)}>Configure access</button>
-      </div>
-      {error && (
-        <p role="alert" className="error">
-          {error}
-        </p>
-      )}
-      {message && (
-        <p role="status" className="notice">
-          {message}
-        </p>
-      )}
-      {rows.length ? (
-        <div className="table-scroll">
-          <table>
-            <caption className="sr-only">Current business permissions</caption>
-            <thead>
-              <tr>
-                <th>Staff email</th>
-                <th>Area</th>
-                <th>Scope</th>
-                <th>Edit</th>
-                <th>Approve</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id || String(r.email) + String(r.area)}>
-                  <td>{String(r.email || "")}</td>
-                  <td>{String(r.area || "")}</td>
-                  <td>{String(r.scope || "")}</td>
-                  <td>{r.write_access ? "Yes" : "No"}</td>
-                  <td>{r.approve_access ? "Yes" : "No"}</td>
+        )}
+        {message && (
+          <p role="status" className="notice">
+            {message}
+          </p>
+        )}
+        {rows.length ? (
+          <div className="table-scroll">
+            <table>
+              <caption className="sr-only">
+                Current business permissions
+              </caption>
+              <thead>
+                <tr>
+                  <th>Staff email</th>
+                  <th>Area</th>
+                  <th>Scope</th>
+                  <th>Edit</th>
+                  <th>Approve</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p>
-          No explicit business grants are listed. The owner retains owner
-          access.
-        </p>
-      )}
-    </section>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id || String(r.email) + String(r.area)}>
+                    <td>{String(r.email || "")}</td>
+                    <td>{String(r.area || "")}</td>
+                    <td>{String(r.scope || "")}</td>
+                    <td>{r.write_access ? "Yes" : "No"}</td>
+                    <td>{r.approve_access ? "Yes" : "No"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p>
+            No explicit business grants are listed. The owner retains owner
+            access.
+          </p>
+        )}
+      </section>
+    </>
   );
 }

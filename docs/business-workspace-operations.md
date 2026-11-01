@@ -1,5 +1,8 @@
 # Lutera business workspace: release and operations
 
+For owner settings, accounting books, responsibilities and electronic approvals,
+see [the 1 November owner release](business-suite-owner-release.md).
+
 For the 24 October expansion, new controls, verification evidence and open
 account setup, see [implementation status](business-workspace-completion-status.md).
 

@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { dispatchBusinessMail, job } from "@/lib/business-mail";
 import { randomUUID, createHash } from "node:crypto";
 import { z } from "zod";
+import { documentSignatures } from "@/lib/signatures";
 import { statementPDF, type StatementSnapshot } from "@/lib/statement";
 import { normalizeEvidence } from "@/lib/evidence";
 import {
@@ -798,7 +799,7 @@ export async function POST(
       const settings =
         d.payload.company ||
         (checked(await db.rpc("work_quote_settings")) as Settings);
-      const bytes = await financialExport(d, settings, b.format);
+      const bytes = await financialExport(d, settings, b.format, await documentSignatures(db,"work_documents",d.id));
       return new Response(new Uint8Array(bytes), {
         headers: {
           "Content-Type": "application/octet-stream",
@@ -1246,7 +1247,7 @@ export async function POST(
         created_at: record.created_at,
         issued_at: record.issued_at,
       } as unknown as BusinessDocument;
-      const bytes = await financialExport(doc, settings, b.format);
+      const bytes = await financialExport(doc, settings, b.format, await documentSignatures(db,"work_commercial",String(record.id)));
       return new Response(new Uint8Array(bytes), {
         headers: {
           "Content-Type":

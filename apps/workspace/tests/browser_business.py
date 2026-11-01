@@ -21,6 +21,7 @@ def fixture(route):
  if action=='session':return reply({'email':'ui@example.invalid','role':'owner','verified':True,'factors':[]})
  if action=='state':return reply(state)
  if action=='business/config':return reply(conf)
+ if action=='suite/config':return reply({'owner':True,'members':[],'responsibilities':[]})
  if action=='business/dashboard':return reply({'enquiries':0,'open_projects':0,'overdue_tasks':0,'finance':[]})
  if action=='business/list':return reply({'rows':rows.get(body['entity'],[]),'more':False})
  if action=='business/detail':

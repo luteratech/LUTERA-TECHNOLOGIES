@@ -17,6 +17,7 @@ export const roles = [
   "editor",
   "finance",
   "designer",
+  "staff",
 ] as const;
 export type Role = (typeof roles)[number];
 export const permissions: Record<string, readonly Role[]> = {
@@ -151,6 +152,7 @@ export const settingsSchema = z
     account_name: text(160),
     account_number: text(40),
     tax_id: text(80),
+    registration_number: text(80).optional(),
     document_notes: text(2000),
     currency: z.enum(["NGN", "USD", "GBP", "EUR"]),
   })

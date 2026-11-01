@@ -15,6 +15,13 @@ export const restoreOrder = [
   "work_profiles",
   "work_staff",
   "work_grants",
+  "work_owner_setup",
+  "work_responsibilities",
+  "work_signature_profiles",
+  "work_document_signatures",
+  "work_ledger_accounts",
+  "work_ledger_journals",
+  "work_ledger_periods",
   "work_customers",
   "work_contacts",
   "work_enquiries",
@@ -84,6 +91,7 @@ export function recoverySQL(snapshot: Record<string, unknown>) {
     "DO $$BEGIN IF EXISTS(SELECT 1 FROM public.work_documents) OR EXISTS(SELECT 1 FROM public.work_customers) OR EXISTS(SELECT 1 FROM public.work_staff) THEN RAISE EXCEPTION 'Restore target already contains business records';END IF;END;$$;",
   );
   const seedTables = [
+    "work_owner_setup", "work_ledger_accounts", "work_ledger_periods",
     "work_settings",
     "work_site_drafts",
     "work_public_site",

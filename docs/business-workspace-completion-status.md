@@ -1,6 +1,6 @@
 # Business workspace implementation status
 
-Updated 24 October 2026. Company: **Lutera Technology Ltd**.
+Expansion status, with [1 November owner-release additions](business-suite-owner-release.md). Company: **Lutera Technology Ltd**.
 
 This records the expansion delivered in the repository and the remaining
 operational setup. It does not treat account authorization or company acceptance

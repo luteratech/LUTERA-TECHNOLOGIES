@@ -92,10 +92,11 @@ const textLines = (
 const wrapSVG = (width: number, height: number, inner: string) =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="white"/><g font-family="DejaVu Sans,Arial,sans-serif">${inner}</g></svg>`;
 
-export async function financialExport(
+async function baseFinancialExport(
   record: BusinessDocument,
   settings: Settings,
   format: "pdf" | "docx" | "png",
+  approvals: import("./suite").DocumentSignature[] = [],
 ) {
   const doc = record.payload;
   const company = doc.company || settings;
@@ -124,6 +125,9 @@ export async function financialExport(
       ? [`Payment details: ${payment}`]
       : []),
     ...(company.tax_id ? [`Tax identification: ${company.tax_id}`] : []),
+    ...(company.registration_number
+      ? [`Company registration: ${company.registration_number}`]
+      : []),
     ...(doc.notes ? [doc.notes] : []),
     ...(company.document_notes ? [company.document_notes] : []),
     ...(record.payload.void_reason
@@ -329,6 +333,26 @@ export async function financialExport(
     }
     y -= 15;
     for (const section of sections) paragraph(section);
+    for (const approval of approvals) {
+      ensure(145);
+      y -= 10;
+      paragraph(
+        `Approved electronically by ${approval.full_name} · ${approval.capacity}`,
+      );
+      const signature = await pdf.embedPng(
+        Buffer.from(approval.image_data.split(",")[1], "base64"),
+      );
+      const dimensions = signature.scaleToFit(180, 55);
+      page.drawImage(signature, {
+        x: 42,
+        y: y - 65,
+        width: dimensions.width,
+        height: dimensions.height,
+      });
+      y -= 80;
+      paragraph(`Approved: ${approval.created_at} · Reference: ${approval.id}`);
+    }
+
     for (const [index, p] of pdf.getPages().entries())
       p.drawText(
         `Lutera | ${record.number || "DRAFT"} | Page ${index + 1} of ${pdf.getPageCount()}`,
@@ -419,6 +443,26 @@ export async function financialExport(
               true,
             ),
             ...sections.map((t) => paragraph(t)),
+            ...approvals.flatMap((a) => [
+              paragraph(
+                `Approved electronically by ${a.full_name} · ${a.capacity}`,
+                true,
+              ),
+              new Paragraph({
+                children: [
+                  new ImageRun({
+                    type: "png",
+                    data: Buffer.from(a.image_data.split(",")[1], "base64"),
+                    transformation: { width: 192, height: 60 },
+                  }),
+                ],
+              }),
+              paragraph(`Approval ${a.id} · ${a.created_at}`),
+              paragraph(`Source fingerprint: ${a.source_hash}`),
+              paragraph(
+                "Editable copy of an electronically approved record. This DOCX does not carry a PDF signing certificate.",
+              ),
+            ]),
           ],
         },
       ],
@@ -601,4 +645,97 @@ export async function cardExport(
   return Packer.toBuffer(
     new Document({ creator: c.name, sections: [{ children: images }] }),
   );
+}
+
+/** Authenticated electronic approval appearance and audit evidence. This is not
+ * an X.509/certificate-based PDF signature and must never be labelled as one. */
+export async function financialExport(
+  record: BusinessDocument,
+  settings: Settings,
+  format: "pdf" | "docx" | "png",
+  approvals: import("./suite").DocumentSignature[] = [],
+) {
+  const valid =
+    record.status === "issued"
+      ? approvals
+          .filter((a) => a.source_version === record.version)
+          .slice(0, 10)
+      : [];
+  const base = await baseFinancialExport(
+    record,
+    settings,
+    format,
+    format === "docx" || format === "pdf" ? valid : [],
+  );
+  if (!valid.length || format === "docx") return base;
+  if (format === "pdf") {
+    const pdf = await PDFDocument.load(base);
+    pdf.registerFontkit(fontkit);
+    const font = await pdf.embedFont(
+      await readFile(path.join(process.cwd(), "public/fonts/Sora-400.ttf")),
+      { subset: true },
+    );
+    for (const a of valid) {
+      const page = pdf.addPage([595.28, 841.89]);
+      let y = 785;
+      const draw = (text: string, size = 10) => {
+        for (const line of lines(text, 80)) {
+          page.drawText(line, {
+            x: 42,
+            y,
+            size,
+            font,
+            color: rgb(0.08, 0.1, 0.21),
+          });
+          y -= size + 7;
+        }
+        y -= 5;
+      };
+      draw("LUTERA · Electronic approval record", 18);
+      draw("Document: " + (record.number || record.id));
+      draw(a.full_name + " · " + a.capacity, 13);
+      const image = await pdf.embedPng(
+        Buffer.from(a.image_data.split(",")[1], "base64"),
+      );
+      const size = image.scaleToFit(260, 90);
+      page.drawImage(image, {
+        x: 42,
+        y: y - 100,
+        width: size.width,
+        height: size.height,
+      });
+      y -= 125;
+      draw("Approved at: " + a.created_at);
+      draw("Approval reference: " + a.id);
+
+      draw(
+        a.self_approved
+          ? "Owner self-approval"
+          : "Authorised document approval",
+      );
+      draw("Approved source revision: " + a.source_version);
+      draw("Source SHA-256: " + a.source_hash);
+      draw(
+        "This approval is bound to the source revision retained in the private workspace. It is not a certificate-based PDF signature. Changes require a new approval.",
+      );
+    }
+    return Buffer.from(await pdf.save());
+  }
+  const meta = await sharp(base).metadata();
+  const width = meta.width || 1000;
+  const height = 310 * valid.length;
+  const content = valid
+    .map((a, i) => {
+      const top = i * 310;
+      return `<g transform="translate(0,${top})">${textLines("Approved electronically: " + a.full_name, 50, 40, 65, 19, navy, 600)}<image x="50" y="65" width="240" height="75" href="${a.image_data}"/>${textLines(a.capacity + " · " + a.created_at, 50, 170, 85, 16)}${textLines("Approval: " + a.id, 50, 205, 85, 14)}${textLines("Editable/image copy · verify the retained approved source revision", 50, 240, 90, 14)}</g>`;
+    })
+    .join("");
+  const appendix = await sharp(Buffer.from(wrapSVG(width, height, content)))
+    .png()
+    .toBuffer();
+  return sharp(base)
+    .extend({ bottom: height, background: "white" })
+    .composite([{ input: appendix, top: meta.height || 0, left: 0 }])
+    .png()
+    .toBuffer();
 }

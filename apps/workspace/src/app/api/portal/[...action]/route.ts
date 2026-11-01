@@ -75,7 +75,7 @@ export async function GET(
               },
             }
       ) as BusinessDocument;
-      const bytes = await financialExport(doc, settings, "pdf");
+      const bytes = await financialExport(doc, settings, "pdf", data.approvals || []);
       return new Response(new Uint8Array(bytes), {
         headers: {
           "Content-Type": "application/pdf",

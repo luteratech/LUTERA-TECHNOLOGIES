@@ -139,6 +139,42 @@ const control = (
 });
 
 export const workspaceTools: WorkspaceTool[] = [
+  {
+    id: "company-accounting",
+    department: "financial",
+    label: "Accounting books",
+    description:
+      "Chart of accounts, balanced journals, source imports, financial statements and period closing.",
+    section: "accounting",
+    area: "finance",
+  },
+  {
+    id: "signed-approvals",
+    department: "financial",
+    label: "Document signatures",
+    description:
+      "Review approved documents and apply your personal signature to the exact revision.",
+    section: "signatures",
+    area: "finance",
+  },
+  {
+    id: "owner-setup",
+    department: "administration",
+    label: "Owner tax & accounting setup",
+    description:
+      "Complete tax records when ready, review opening balances and configure owner self-approval.",
+    section: "owner-setup",
+    capability: "members",
+  },
+  {
+    id: "personal-signature",
+    department: "administration",
+    label: "My signing profile",
+    description:
+      "Save the personal signature used for authenticated document approvals.",
+    section: "signature-profile",
+    capability: "members",
+  },
   business(
     "customers",
     "sales",
@@ -784,6 +820,10 @@ export const workspaceSections = [
   "audit",
   "backup",
   "business-access",
+  "accounting",
+  "signatures",
+  "signature-profile",
+  "owner-setup",
   ...departments.map((d) => d.id),
 ];
 export function departmentFor(section: string, params: URLSearchParams) {

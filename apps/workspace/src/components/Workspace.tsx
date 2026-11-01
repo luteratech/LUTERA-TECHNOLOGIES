@@ -15,6 +15,9 @@ const Documents = dynamic(() => import("./documents"), {
 });
 import WorkspaceShell from "./WorkspaceShell";
 import WorkspaceAreas from "./WorkspaceAreas";
+const OwnerSuite = dynamic(() => import("./OwnerSuite"), {
+  loading: () => <p role="status">Opening business tools…</p>,
+});
 const BusinessAccess = dynamic(() => import("./BusinessAccess"), {
   loading: () => <p role="status">Opening permissions…</p>,
 });
@@ -254,6 +257,10 @@ export default function Workspace() {
   )[tab];
   const legacyLabels: Record<string, string> = {
     overview: "Dashboard",
+    "owner-setup": "Owner tax & accounting setup",
+    "signature-profile": "My signing profile",
+    signatures: "Document signatures",
+    accounting: "Accounting books",
     account: "My account",
     operations: "Business tools",
     controls: "Additional tools",
@@ -491,6 +498,10 @@ export default function Workspace() {
                 refresh={refresh}
               />
             )}
+            {tab === "owner-setup" && <OwnerSuite view="setup" />}
+            {tab === "accounting" && <OwnerSuite view="accounting" />}
+            {tab === "signatures" && <OwnerSuite view="approvals" />}
+            {tab === "signature-profile" && <OwnerSuite view="signature" />}
             {tab === "business-access" && (
               <BusinessAccess config={accessConfig} />
             )}
@@ -502,7 +513,28 @@ export default function Workspace() {
             {tab === "business-settings" && <BusinessAdministration />}
             {tab === "reports" && <BusinessReports />}
             {tab === "backup" && <Backups />}
-            {tab === "account" && <Account session={session} />}
+            {tab === "account" && (
+              <>
+                <section className="panel">
+                  <h2>Document signing</h2>
+                  <div className="actions">
+                    <button
+                      className="secondary"
+                      onClick={() => goToSection("signature-profile")}
+                    >
+                      My signing profile
+                    </button>
+                    <button
+                      className="secondary"
+                      onClick={() => goToSection("signatures")}
+                    >
+                      Document signatures
+                    </button>
+                  </div>
+                </section>
+                <Account session={session} />
+              </>
+            )}
           </div>
         )}
       </main>
@@ -872,18 +904,33 @@ function Members({
       >
         <h2>Approve a colleague</h2>
         <p>
-          Owner controls access and backups. Admin manages operational areas.
-          Editor updates website content, finance manages financial documents,
-          and designer manages staff cards. Every role requires MFA.
+          You retain Owner control. Start colleagues with Staff and grant only
+          the business areas they need. Finance is the accountant role, Editor
+          manages the website, and Designer manages cards. Add their
+          responsibilities and signing/posting authority under Business
+          permissions. Every role requires MFA.
         </p>
         <div className="form-grid">
           <Field label="Email">
             <input type="email" name="email" required maxLength={254} />
           </Field>
           <Field label="Role">
-            <select name="role" defaultValue="editor">
+            <select name="role" defaultValue="staff">
               {roles.map((role) => (
-                <option key={role}>{role}</option>
+                <option key={role} value={role}>
+                  {
+                    (
+                      {
+                        owner: "Owner",
+                        admin: "Operations administrator",
+                        editor: "Website administrator",
+                        finance: "Accountant / finance",
+                        designer: "Staff cards designer",
+                        staff: "Staff — explicit business grants",
+                      } as Record<string, string>
+                    )[role]
+                  }
+                </option>
               ))}
             </select>
           </Field>

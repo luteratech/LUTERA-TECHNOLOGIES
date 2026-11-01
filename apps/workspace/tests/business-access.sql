@@ -17,6 +17,7 @@ end;$$;
 reset role;
 select set_config('request.jwt.claims',json_build_object('sub',owner_id,'aal','aal2','session_id',session_id)::text,true) from work_test_ids;
 set local role authenticated;
+select public.work_suite(jsonb_build_object('action','setup','version',(select version from public.work_owner_setup where id=1),'data',jsonb_set((select payload from public.work_owner_setup where id=1),'{tax}',jsonb_build_object('status','confirmed','tax_id','FIXTURE-TAX-ONLY','registration_number','FIXTURE-RC-ONLY','vat_status','registered','effective_from','2000-01-01','reference','Synthetic tax profile for isolated tests','notes','Not a real tax declaration'))));
 do $$
 declare c jsonb;r jsonb;doc jsonb;line jsonb;cid uuid;supplier uuid;item uuid;ord uuid;inv uuid;purchase uuid;delivery uuid;payment uuid;allocation uuid;project uuid;expense uuid;evidence uuid=gen_random_uuid();accepted uuid=gen_random_uuid();order_line uuid;invoice_line uuid;purchase_line uuid;delivery_line uuid;reservation uuid;refused boolean;ids uuid[]='{}';rowid uuid;
 begin
@@ -28,7 +29,7 @@ begin
  c=public.work_business(jsonb_build_object('command','commercial_issue','id',ord,'version',1,'reason','Fixture issue reason'));
  if c->>'number' not like 'LUT-ORD-%' or (c->>'total_minor')::bigint<>100000 then raise exception 'Order numbering/totals failed';end if;
  select id into order_line from public.work_commercial_lines where record_id=ord;
- doc=doc||jsonb_build_object('kind','invoice','source_id',ord,'due_date','2026-10-25','lines',jsonb_build_array(jsonb_build_object('item_id',item,'source_line_id',order_line,'description','Partial fixture invoice','quantity',6,'unit_minor',10000)));
+ doc=doc||jsonb_build_object('kind','invoice','notes','Synthetic zero-rated test supply','source_id',ord,'due_date','2026-10-25','lines',jsonb_build_array(jsonb_build_object('item_id',item,'source_line_id',order_line,'description','Partial fixture invoice','quantity',6,'unit_minor',10000)));
  c=public.work_business(jsonb_build_object('command','commercial_save','request_key',gen_random_uuid(),'version',0,'data',doc));inv=(c->>'id')::uuid;
  c=public.work_business(jsonb_build_object('command','commercial_issue','id',inv,'version',1,'reason','Fixture invoice issue'));
  select id into invoice_line from public.work_commercial_lines where record_id=inv;
