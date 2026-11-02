@@ -22,7 +22,7 @@ const settings: Settings = {
     name: "Lutera Technology Ltd",
     address:
       "No. 7, Mahatma Gandhi Street, Area 11, Garki, Abuja, FCT, Nigeria",
-    email: "chimaster010@gmail.com",
+    email: "info@luteratech.com",
     phone: "+234 902 6276 130",
     website: "https://luteratech.com",
   },
@@ -181,7 +181,17 @@ test("encrypted backup round-trip rejects wrong password and modified ciphertext
 });
 test("financial exports: parse PDF, DOCX ZIP and PNG, including long multipage content", async () => {
   await mkdir("test-results/exports", { recursive: true });
-  for (const kind of ["quotation", "proforma", "receipt"] as const) {
+  for (const kind of [
+    "quotation",
+    "proforma",
+    "receipt",
+    "invoice",
+    "purchase",
+    "rfq",
+    "delivery",
+    "order",
+    "credit",
+  ] as const) {
     const r = {
       ...record,
       kind,
@@ -199,14 +209,25 @@ test("financial exports: parse PDF, DOCX ZIP and PNG, including long multipage c
       },
     };
     for (const format of ["pdf", "docx", "png"] as const) {
-      const bytes = await financialExport(r, settings, format);
+      const bytes = await financialExport(
+        r as unknown as BusinessDocument,
+        settings,
+        format,
+      );
       await writeFile(`test-results/exports/${kind}.${format}`, bytes);
       if (format === "pdf")
         assert.ok((await PDFDocument.load(bytes)).getPageCount() > 0);
       if (format === "docx")
         assert.equal(bytes.subarray(0, 2).toString(), "PK");
-      if (format === "png")
-        assert.equal((await sharp(bytes).metadata()).width, 1000);
+      if (format === "png") {
+        assert.equal((await sharp(bytes).metadata()).width, 1190);
+        const pixel = await sharp(bytes)
+          .extract({ left: 0, top: 0, width: 1, height: 1 })
+          .removeAlpha()
+          .raw()
+          .toBuffer();
+        assert.deepEqual([...pixel], [22, 26, 61]);
+      }
     }
   }
   const long = {
@@ -242,14 +263,14 @@ test("staff card exports: both sides, print dimensions and inactive warning", as
         assert.ok(
           Math.abs(
             pdf.getPage(0).getWidth() -
-              ((template === "name" ? 90 : 54) * 72) / 25.4,
+              ((template === "name" ? 85 : 54) * 72) / 25.4,
           ) < 0.01,
         );
       }
       if (format === "png")
         assert.equal(
           (await sharp(bytes).metadata()).height,
-          template === "name" ? 600 : 1032,
+          template === "name" ? 660 : 1032,
         );
       if (format === "docx")
         assert.equal(bytes.subarray(0, 2).toString(), "PK");

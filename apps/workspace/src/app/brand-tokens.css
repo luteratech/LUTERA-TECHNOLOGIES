@@ -1,0 +1,177 @@
+/* ─────────────────────────────────────────────────────────────────────────
+ * design-systems/lutera/tokens.css
+ *
+ * Token bindings for Lutera Technologies, a company that imports
+ * equipment and installs computer labs and IT infrastructure for
+ * schools, government agencies and private companies. The brand reads
+ * as an international-grade technology firm: reliable, established,
+ * modern, techy, simple. Source of truth: the Lutera Brand Decisions
+ * Brief (19 Oct 2026) and the approved master logo (same date).
+ *
+ * Paste the whole file (both blocks) into the first <style> of every
+ * artifact, then reference every value through its token name.
+ *
+ * Brand-specific schema decisions:
+ *   1. --accent is the SIGNAL colour, and it follows the logo: Lutera
+ *      blue (#2E5BFF) on light grounds, signal cyan (#2BC4E8) on dark
+ *      grounds. The short bars of the symbol use exactly this pairing,
+ *      so the UI accent and the logo always agree.
+ *   2. --bg is Paper (#F3F2EE), not white. Cards (--surface) lift to
+ *      white on top of it. --surface-warm is a real third tier: a pale
+ *      blue wash for feature bands, so it is bound independently.
+ *   3. --fg is Ink (#111318) for reading text. Headings and the logo
+ *      use Navy (#161A3D) through the --lt-navy extension. The ramp is
+ *      four stops (Ink, slate, muted, meta), each checked at 4.5:1 or
+ *      better on Paper, white and the blue wash.
+ *   4. Sora is the brand typeface (SIL OFL, free for print, signage and
+ *      web). Playfair Display Italic (SIL OFL) is a rare accent: one to
+ *      three words inside a headline, or a short pull quote, at most
+ *      once per screen (--lt-font-accent). JetBrains Mono (SIL OFL) is
+ *      used only for asset numbers, serial numbers, code and figures.
+ *   5. --radius-pill is the brand's bar shape: buttons, tags and status
+ *      pills are fully rounded like the bars of the symbol.
+ *   6. --tracking-display is -0.03em: Sora is wide; the wordmark itself
+ *      runs at -0.05em, headings slightly looser.
+ *   7. Motion uses the strong ease-out cubic-bezier(0.23, 1, 0.32, 1).
+ *      The one signature animation is the blinking cursor.
+ *
+ * Brand extensions use the --lt- prefix (Lutera) and are documented in
+ * DESIGN.md §2. Shared components must not depend on them; brand
+ * artifacts may.
+ * ─────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Surface (3 levels): Paper canvas, white cards, blue-wash bands */
+  --bg: #F3F2EE;
+  --surface: #FFFFFF;
+  --surface-warm: #EEF2FF;
+
+  /* Foreground ramp (4 levels) */
+  --fg: #111318;
+  --fg-2: #3A3F5C;
+  --muted: #5D6280;
+  --meta: #656A88;
+
+  /* Border (2 levels) */
+  --border: #D3D4DC;
+  --border-soft: #E3E3E8;
+
+  /* Accent = signal colour (Lutera blue on light) */
+  --accent: #2E5BFF;
+  --accent-on: #FFFFFF;
+  --accent-hover: #224AE0;
+  --accent-active: #1B3CB8;
+
+  /* Semantic (lab status: commissioned / pending / fault) */
+  --success: #157A4F;
+  --warn: #A15C00;
+  --danger: #C42F2F;
+
+  /* Typography */
+  --font-display: "Sora", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Sora", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 24px;
+  --text-2xl: 32px;
+  --text-3xl: 44px;
+  --text-4xl: 64px;
+
+  --leading-body: 1.6;
+  --leading-tight: 1.12;
+  --tracking-display: -0.03em;
+
+  /* Spacing (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* Section rhythm */
+  --section-y-desktop: 96px;
+  --section-y-tablet: 72px;
+  --section-y-phone: 48px;
+
+  /* Radius: pill echoes the rounded bars of the symbol */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 9999px;
+
+  /* Elevation: navy-tinted, used sparingly */
+  --elev-flat: none;
+  --elev-ring: 0 0 0 1px var(--border);
+  --elev-raised: 0 8px 24px rgba(22, 26, 61, 0.08);
+
+  /* Focus */
+  --focus-ring: 0 0 0 3px color-mix(in oklab, var(--accent), transparent 60%);
+
+  /* Motion */
+  --motion-fast: 150ms;
+  --motion-base: 200ms;
+  --ease-standard: cubic-bezier(0.23, 1, 0.32, 1);
+
+  /* Layout */
+  --container-max: 1200px;
+  --container-gutter-desktop: 32px;
+  --container-gutter-tablet: 24px;
+  --container-gutter-phone: 16px;
+
+  /* Brand extensions (Lutera palette, fixed in every theme) */
+  --lt-navy: #161A3D;
+  --lt-blue: #2E5BFF;
+  --lt-cyan: #2BC4E8;
+  --lt-paper: #F3F2EE;
+  --lt-ink: #111318;
+  --lt-white: #FFFFFF;
+  /* Theme-aware brand roles */
+  --lt-heading: #161A3D;
+  --lt-logo-main: #161A3D;
+  --lt-logo-signal: #2E5BFF;
+  --lt-tracking-wordmark: -0.05em;
+  --lt-tracking-label: 0.14em;
+  --lt-tracking-descriptor: 0.32em;
+  /* Accent serif: always italic, rare (see DESIGN.md §4) */
+  --lt-font-accent: "Playfair Display", Georgia, "Times New Roman", serif;
+  --lt-accent-scale: 1.04em; /* matches Sora x-height (534 vs 514) */
+}
+
+[data-theme="dark"] {
+  /* Dark ground = Navy. Accent switches to signal cyan, as in the logo. */
+  --bg: #161A3D;
+  --surface: #1F2452;
+  --surface-warm: #0F1230;
+
+  --fg: #F3F2EE;
+  --fg-2: #D4D7E8;
+  --muted: #A4A9C6;
+  --meta: #8C92B4;
+
+  --border: #343A6E;
+  --border-soft: #282D5C;
+
+  --accent: #2BC4E8;
+  --accent-on: #161A3D;
+  --accent-hover: #4FD1EE;
+  --accent-active: #1FA9CB;
+
+  --success: #3DD68C;
+  --warn: #F2B84B;
+  --danger: #FF7A7A;
+
+  --elev-raised: 0 8px 24px rgba(0, 0, 0, 0.32);
+
+  --lt-heading: #FFFFFF;
+  --lt-logo-main: #FFFFFF;
+  --lt-logo-signal: #2BC4E8;
+
+  color-scheme: dark;
+}

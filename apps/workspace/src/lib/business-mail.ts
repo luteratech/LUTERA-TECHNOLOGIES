@@ -31,7 +31,7 @@ export function businessMail(subject: string, body: string) {
   return (
     '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>' +
     escape(subject) +
-    '</title></head><body style="margin:0;background:#f3f2ee;color:#151936;font-family:Arial,sans-serif"><table role="presentation" width="100%"><tr><td align="center" style="padding:32px 16px"><table role="presentation" width="600" style="max-width:100%;background:#fff"><tr><td style="padding:32px"><img src="https://luteratech.com/assets/logo/lutera-email-logo.png" width="168" alt="Lutera Technology Ltd"><h1 style="font-size:24px;line-height:1.4">' +
+    '</title></head><body style="margin:0;background:#f3f2ee;color:#161A3D;font-family:Arial,sans-serif"><table role="presentation" width="100%"><tr><td align="center" style="padding:32px 16px"><table role="presentation" width="600" style="max-width:100%;background:#fff"><tr><td style="padding:32px"><img src="https://luteratech.com/assets/logo/lutera-email-logo.png" width="168" alt="Lutera Technology Ltd"><h1 style="font-size:24px;line-height:1.4">' +
     escape(subject) +
     '</h1><p style="font-size:16px;line-height:1.7;white-space:pre-line">' +
     escape(body) +

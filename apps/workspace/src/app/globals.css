@@ -1,3 +1,5 @@
+@import "./brand-tokens.css";
+
 @font-face {
   font-family: LuteraSymbols;
   src: url("/fonts/ExportFallback.ttf") format("truetype");
@@ -13,20 +15,25 @@
 }
 @font-face {
   font-family: Sora;
+  src: url("/fonts/Sora-500.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: Sora;
   src: url("/fonts/Sora-600.woff2") format("woff2");
   font-weight: 600;
   font-display: swap;
 }
 :root {
-  --navy: #151936;
-  --blue: #3456ff;
-  --paper: #f3f2ee;
-  --muted: #525b75;
-  --line: #d7dae4;
-  --error: #a51f36;
+  --navy: var(--lt-navy);
+  --blue: var(--lt-blue);
+  --paper: var(--lt-paper);
+  --line: var(--border);
+  --error: var(--danger);
   color-scheme: light;
   font-family: Sora, LuteraSymbols, Arial, sans-serif;
-  color: var(--navy);
+  color: var(--fg);
   background: var(--paper);
   font-synthesis: none;
 }
@@ -54,21 +61,21 @@ summary {
 }
 button {
   border: 1px solid var(--blue);
-  border-radius: 8px;
+  border-radius: var(--radius-pill);
   background: var(--blue);
   color: white;
   min-height: 44px;
   padding: 10px 18px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition:
     background 0.15s,
     box-shadow 0.15s;
 }
 button:hover:not(:disabled) {
-  background: #2340d0;
-  box-shadow: 0 4px 12px #3456ff20;
+  background: var(--accent-hover);
+  box-shadow: none;
 }
 button:disabled {
   cursor: not-allowed;
@@ -80,7 +87,7 @@ button.secondary {
   border-color: var(--line);
 }
 button.secondary:hover:not(:disabled) {
-  background: #eef0ff;
+  background: var(--surface-warm);
   border-color: var(--blue);
 }
 button.danger {
@@ -96,13 +103,13 @@ button.text-button {
   text-underline-offset: 4px;
 }
 a {
-  color: #2442ce;
+  color: var(--blue);
   text-underline-offset: 4px;
 }
 button:focus-visible,
 a:focus-visible,
 summary:focus-visible {
-  outline: 3px solid #00809c;
+  outline: 3px solid var(--blue);
   outline-offset: 3px;
 }
 input,
@@ -143,8 +150,9 @@ h1,
 h2,
 h3 {
   font-weight: 600;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.02em;
   line-height: 1.25;
+  color: var(--navy);
 }
 h1 {
   font-size: 36px;
@@ -298,7 +306,7 @@ legend {
   max-width: 340px;
 }
 .auth-brand .eyebrow {
-  color: #8d9eff;
+  color: var(--lt-cyan);
 }
 .auth-brand > span {
   color: #c4cbe9;
@@ -483,7 +491,7 @@ main#workspace-main {
   min-height: 280px;
 }
 .welcome .eyebrow {
-  color: #aab8ff;
+  color: var(--lt-cyan);
 }
 .welcome h2 {
   font-size: 32px;
@@ -676,11 +684,11 @@ td button {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 25px;
-  aspect-ratio: 1.8;
+  aspect-ratio: 85 / 55;
   background: var(--paper);
   overflow: hidden;
   color: var(--navy);
-  box-shadow: 0 15px 35px #15193610;
+  box-shadow: 0 15px 35px #161a3d10;
   margin: 25px 0;
 }
 .card-preview .card-logo {
@@ -698,7 +706,7 @@ td button {
   overflow-wrap: anywhere;
 }
 .card-preview .job {
-  color: #2645d6;
+  color: var(--blue);
 }
 .card-preview.back {
   background: var(--navy);
@@ -1247,7 +1255,7 @@ dialog .actions {
   place-items: center;
 }
 .password-control .password-eye:hover {
-  background: #eef0ff;
+  background: var(--surface-warm);
   color: var(--navy);
 }
 .password-rules {
@@ -1312,8 +1320,8 @@ dialog .actions {
   place-items: center;
   flex: 0 0 35px;
   height: 35px;
-  background: #eef0ff;
-  color: #3456ff;
+  background: var(--surface-warm);
+  color: var(--blue);
   border-radius: 10px;
   font-size: 12px;
   font-weight: 600;
@@ -1335,7 +1343,7 @@ dialog .actions {
   overflow: hidden;
   display: grid;
   place-items: center;
-  background: #eef0ff;
+  background: var(--surface-warm);
   color: var(--blue);
   font-size: 25px;
   font-weight: 600;
@@ -1377,7 +1385,7 @@ dialog .actions {
   border-radius: 10px;
   background: #f0faf4;
   color: #175c3d;
-  box-shadow: 0 5px 20px #1519360a;
+  box-shadow: 0 5px 20px #161a3d0a;
 }
 .account-feedback.error {
   background: #fff4f5;
@@ -1893,7 +1901,7 @@ dialog .actions {
     background: white;
     border: 0;
     border-bottom: 1px solid var(--line);
-    box-shadow: 0 12px 28px #15193620;
+    box-shadow: 0 12px 28px #161a3d20;
     padding: 16px;
   }
   .workspace-sidebar nav {
@@ -2084,12 +2092,12 @@ dialog .actions {
 }
 .workspace .workspace-sidebar nav button:hover:not(:disabled) {
   color: white;
-  background: #ffffff18;
+  background: #161a3d24;
   box-shadow: none;
 }
 .workspace .workspace-sidebar nav button[aria-current="page"] {
   background: white;
-  color: #2340d0;
+  color: var(--accent-hover);
   font-weight: 600;
 }
 .workspace .workspace-sidebar nav .department-nav {
@@ -2109,7 +2117,7 @@ dialog .actions {
   border-radius: 8px;
 }
 .department-nav-row[data-active="true"] {
-  background: #ffffff18;
+  background: #161a3d24;
 }
 .workspace .workspace-sidebar nav .department-expand {
   display: grid;
@@ -2156,10 +2164,10 @@ dialog .actions {
   justify-content: space-between;
   align-items: flex-start;
   gap: 30px;
-  border: 1px solid #dce2ff;
+  border: 1px solid var(--line);
   padding: 28px;
   border-radius: 16px;
-  background: linear-gradient(115deg, #edf0ff, #fff 80%);
+  background: var(--surface-warm);
   margin-bottom: 24px;
 }
 .department-intro h2 {
@@ -2174,7 +2182,7 @@ dialog .actions {
   margin: 0;
 }
 .department-intro .eyebrow {
-  color: #2340d0;
+  color: var(--accent-hover);
 }
 .department-quick {
   display: flex;
@@ -2215,7 +2223,7 @@ dialog .actions {
   line-height: 1.6;
 }
 .department-card small {
-  color: #2340d0;
+  color: var(--accent-hover);
   margin-top: auto;
   padding-top: 8px;
 }
@@ -2225,15 +2233,15 @@ dialog .actions {
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: #edf0ff;
-  color: #2340d0;
+  background: var(--surface-warm);
+  color: var(--accent-hover);
 }
 .department-card:hover:not(:disabled),
 .tool-card:hover:not(:disabled) {
   color: var(--navy);
   background: #f8f9ff;
-  border-color: #3456ff88;
-  box-shadow: 0 6px 16px #1519360a;
+  border-color: var(--blue);
+  box-shadow: 0 6px 16px #161a3d0a;
 }
 .department-workflow {
   margin: 0 0 28px;
@@ -2259,7 +2267,7 @@ dialog .actions {
   font-size: 12px;
 }
 .department-workflow li > span {
-  color: #2340d0;
+  color: var(--accent-hover);
   font-weight: 600;
 }
 .department-tools {
@@ -2308,7 +2316,7 @@ dialog .actions {
   line-height: 1.6;
 }
 .tool-card > span:last-child {
-  color: #2340d0;
+  color: var(--accent-hover);
 }
 .tool-context {
   margin: 0 0 20px;
@@ -2320,14 +2328,14 @@ dialog .actions {
 }
 .tool-context details {
   padding: 12px 16px;
-  background: #edf0ff;
+  background: var(--surface-warm);
   border-radius: 10px;
   font-size: 12px;
 }
 .tool-context summary {
   cursor: pointer;
   min-height: 24px;
-  color: #2340d0;
+  color: var(--accent-hover);
   font-weight: 600;
 }
 .tool-context ol {
@@ -2358,7 +2366,7 @@ dialog .actions {
 }
 .website-status > span {
   font-size: 12px;
-  color: #2340d0;
+  color: var(--accent-hover);
 }
 .status-dot {
   display: inline-block;
@@ -2366,7 +2374,7 @@ dialog .actions {
   height: 8px;
   border-radius: 50%;
   margin-right: 8px;
-  background: #2340d0;
+  background: var(--accent-hover);
 }
 @media (max-width: 1199px) {
   .department-intro {
@@ -2516,4 +2524,64 @@ dialog .actions {
   .signature-record img {
     max-height: 100px;
   }
+}
+
+/* Checkbox controls must not inherit full-width text-field dimensions. */
+input[type="checkbox"],
+input[type="radio"] {
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  padding: 0;
+  margin: 0;
+  flex: none;
+  align-self: center;
+  accent-color: var(--blue);
+  cursor: pointer;
+}
+.field:has(> input[type="checkbox"]),
+.field:has(> input[type="radio"]) {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  align-self: start;
+  gap: 12px;
+  min-height: 44px;
+  font-weight: 500;
+}
+.field:has(> input[type="checkbox"]) > label,
+.field:has(> input[type="checkbox"]) > span,
+.field:has(> input[type="radio"]) > label,
+.field:has(> input[type="radio"]) > span {
+  grid-column: 2;
+  grid-row: 1;
+  cursor: pointer;
+}
+.field > input[type="checkbox"],
+.field > input[type="radio"] {
+  grid-column: 1;
+  grid-row: 1;
+}
+.welcome h2,
+.auth-brand h1 {
+  color: white;
+}
+.department-intro,
+.department-card,
+.tool-card,
+.panel {
+  border-radius: var(--radius-md);
+}
+.department-card,
+.tool-card {
+  box-shadow: none;
+}
+.department-card:hover:not(:disabled),
+.tool-card:hover:not(:disabled) {
+  box-shadow: none;
+}
+
+.check {
+  min-height: 44px;
+  align-items: center;
 }

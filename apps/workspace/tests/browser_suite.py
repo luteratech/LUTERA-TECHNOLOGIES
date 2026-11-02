@@ -62,6 +62,16 @@ with sync_playwright() as p:
  assert c.request.post(origin+'/api/suite/setup',data={},headers={'Origin':'https://evil.example'}).status==403
  c.route('**/api/**',fixture);page.goto(origin+'/'+entry)
  go(page,'Administration','Owner tax & accounting setup')
+ page.get_by_role('button',name='Save owner settings',exact=True).wait_for()
+ assert page.locator('#workspace-navigation').evaluate("el=>getComputedStyle(el).backgroundColor")=='rgb(46, 91, 255)'
+ assert page.locator('#workspace-main input[type=checkbox]').count()==3
+ for viewport in [1280,768,390]:
+  page.set_viewport_size({'width':viewport,'height':1000})
+  assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),viewport
+  for checkbox in page.locator('#workspace-main input[type=checkbox]').all():
+   bounds=checkbox.bounding_box();assert bounds and bounds['width']<=22 and bounds['height']<=22
+  page.screenshot(path=str(out/f'owner-brand-setup-{viewport}.png'),full_page=True)
+ page.set_viewport_size({'width':1280,'height':1000})
  page.get_by_role('button',name='Save owner settings',exact=True).click();page.get_by_text('Owner settings saved.',exact=False).wait_for()
  assert cfg['setup']['payload']['tax']==setup['tax'] and not cfg['accounting_enabled']
  page.get_by_label('Accounting start date',exact=True).fill('2026-11-01')
@@ -94,7 +104,7 @@ with sync_playwright() as p:
  for width in [320,390,768,1024,1280]:
   page.set_viewport_size({'width':width,'height':900});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),width
   page.add_script_tag(content=axe);report=page.evaluate("async()=>await axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa']}})")
-  assert not report['violations'],[(x['id'],x['help']) for x in report['violations']]
+  assert not report['violations'],[(x['id'],x['help'],[(n['target'],n['failureSummary']) for n in x['nodes']]) for x in report['violations']]
   page.screenshot(path=str(out/f'owner-signing-{width}.png'),full_page=True)
  page.set_viewport_size({'width':1280,'height':1000});go(page,'Administration','Business permissions')
  page.get_by_label('Approved colleague',exact=True).select_option('staff@example.invalid');page.get_by_label('Job title or responsibility label',exact=True).fill('Accountant');page.get_by_label('May post balanced accounting journals',exact=True).check();page.get_by_role('button',name='Save responsibilities',exact=True).click();page.get_by_text('Responsibilities and authority saved.',exact=True).wait_for()

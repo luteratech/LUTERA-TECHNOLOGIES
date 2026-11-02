@@ -73,7 +73,7 @@ with sync_playwright() as p:
  page.goto(origin+'/'+entry)
  page.get_by_role('heading',name='Dashboard',exact=True).wait_for()
  assert page.locator('.department-card').count()==7
- assert page.locator('#workspace-navigation').evaluate("e=>getComputedStyle(e).backgroundColor")== 'rgb(52, 86, 255)'
+ assert page.locator('#workspace-navigation').evaluate("e=>getComputedStyle(e).backgroundColor")== 'rgb(46, 91, 255)'
  page.screenshot(path=str(out/'departments-dashboard.png'),full_page=True)
  go(page,'Sales & Customers','Customers')
 

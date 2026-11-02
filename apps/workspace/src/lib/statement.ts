@@ -2,8 +2,8 @@ import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import sharp from "sharp";
 import type { Settings } from "./contracts";
+import { brandLogo } from "./export-brand";
 export type StatementSnapshot = {
   customer: { name: string; address?: string; email?: string };
   currency: string;
@@ -33,16 +33,8 @@ export async function statementPDF(statement: StatementSnapshot) {
   const bold = await pdf.embedFont(
     await readFile(path.join(process.cwd(), "public/fonts/Sora-600.ttf")),
   );
-  const logo = await pdf.embedPng(
-    await sharp(
-      await readFile(
-        path.join(process.cwd(), "public/brand/lutera-horizontal-light.svg"),
-      ),
-    )
-      .resize(420)
-      .png()
-      .toBuffer(),
-  );
+  const logo = await pdf.embedPng(await brandLogo());
+  const darkLogo = await pdf.embedPng(await brandLogo(true, true));
   let page = pdf.addPage([595.28, 841.89]),
     y = 0,
     balance = Number(statement.opening_minor);
@@ -57,33 +49,59 @@ export async function statementPDF(statement: StatementSnapshot) {
         }
       })
       .join("");
-  const draw = (text: string, x: number, size = 9, strong = false) =>
+  const draw = (
+    text: string,
+    x: number,
+    size = 9,
+    strong = false,
+    white = false,
+  ) =>
     page.drawText(safe(text), {
       x,
       y,
       size,
       font: strong ? bold : font,
-      color: rgb(0.08, 0.1, 0.22),
+      color: white ? rgb(1, 1, 1) : rgb(22 / 255, 26 / 255, 61 / 255),
     });
-  const header = () => {
-    y = 790;
-    page.drawImage(logo, { x: 40, y: 785, width: 126, height: 36 });
-    y = 755;
-    draw("Customer statement", 40, 20, true);
+  const header = (cover = false) => {
+    if (cover) {
+      page.drawRectangle({
+        x: 0,
+        y: 700,
+        width: 595.28,
+        height: 141.89,
+        color: rgb(22 / 255, 26 / 255, 61 / 255),
+      });
+      page.drawImage(darkLogo, { x: 56.69, y: 766, width: 145, height: 42 });
+      y = 728;
+      draw("Customer statement", 56.69, 24, true, true);
+      y = 695;
+    } else {
+      page.drawImage(logo, { x: 56.69, y: 785, width: 112, height: 32 });
+      y = 755;
+      draw("Customer statement", 56.69, 18, true);
+    }
     y -= 28;
-    draw(statement.company.company.name, 40, 10, true);
+    draw(statement.company.company.name, 56.69, 10, true);
     y -= 17;
-    draw(statement.customer.name, 40, 10, true);
+    draw(statement.customer.name, 56.69, 10, true);
     y -= 17;
     draw(
       `${statement.from || "Beginning"} to ${statement.to || "Current"} | ${statement.currency}`,
-      40,
+      56.69,
     );
     y -= 30;
-    draw("Date / reference", 40, 9, true);
-    draw("Debit", 308, 9, true);
-    draw("Credit", 397, 9, true);
-    draw("Balance", 479, 9, true);
+    page.drawRectangle({
+      x: 56.69,
+      y: y - 7,
+      width: 481.9,
+      height: 26,
+      color: rgb(22 / 255, 26 / 255, 61 / 255),
+    });
+    draw("Date / reference", 64.69, 9, true, true);
+    draw("Debit", 308, 9, true, true);
+    draw("Credit", 397, 9, true, true);
+    draw("Balance", 479, 9, true, true);
     y -= 20;
   };
   const next = () => {
@@ -92,14 +110,14 @@ export async function statementPDF(statement: StatementSnapshot) {
       header();
     }
   };
-  header();
-  draw("Opening balance", 40);
+  header(true);
+  draw("Opening balance", 56.69);
   draw(amount(balance), 479);
   y -= 25;
   for (const event of statement.events) {
     balance += Number(event.debit_minor) - Number(event.credit_minor);
     next();
-    draw(`${event.posted_on}  ${event.kind}`, 40);
+    draw(`${event.posted_on}  ${event.kind}`, 56.69);
     draw(amount(Number(event.debit_minor)), 308);
     draw(amount(Number(event.credit_minor)), 397);
     draw(amount(balance), 479);
@@ -107,19 +125,31 @@ export async function statementPDF(statement: StatementSnapshot) {
     const reference = String(event.reference);
     for (let start = 0; start < reference.length; start += 65) {
       next();
-      draw(reference.slice(start, start + 65), 40, 8);
+      draw(reference.slice(start, start + 65), 56.69, 8);
       y -= 13;
     }
+    page.drawLine({
+      start: { x: 56.69, y: y - 2 },
+      end: { x: 538.59, y: y - 2 },
+      thickness: 0.5,
+      color: rgb(211 / 255, 212 / 255, 220 / 255),
+    });
     y -= 10;
   }
   next();
   y -= 8;
-  draw("Closing balance", 40, 11, true);
+  draw("Closing balance", 56.69, 11, true);
   draw(statement.currency + " " + amount(balance), 425, 10, true);
   for (const [i, p] of pdf.getPages().entries())
     p.drawText(
       `${statement.company.company.name} | Page ${i + 1} of ${pdf.getPageCount()}`,
-      { x: 40, y: 30, font, size: 8, color: rgb(0.35, 0.38, 0.46) },
+      {
+        x: 56.69,
+        y: 30,
+        font,
+        size: 8,
+        color: rgb(93 / 255, 98 / 255, 128 / 255),
+      },
     );
   pdf.setTitle("Lutera customer statement");
   return Buffer.from(await pdf.save());
