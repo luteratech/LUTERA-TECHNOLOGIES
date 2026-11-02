@@ -782,7 +782,10 @@ export const workspaceTools: WorkspaceTool[] = [
   },
 ];
 
-export function visibleTools(role: Role, config: WorkspaceAccess | null) {
+export function visibleTools(
+  role: Role | readonly Role[],
+  config: WorkspaceAccess | null,
+) {
   return workspaceTools.filter(
     (t) =>
       (!t.ownerOnly || !!config?.owner) &&

@@ -110,6 +110,9 @@ export function recoverySQL(snapshot: Record<string, unknown>) {
       unknown
     >[];
     for (const row of records) {
+      // Older v2 backups predate multi-role membership. Preserve their recorded
+      // single role without inventing extra access; all restored users stay disabled.
+      if (table === "work_members" && !Array.isArray(row.roles)) row.roles = [row.role];
       if (table === "work_members" || table === "work_portal_members")
         row.active = false;
       if (table === "work_automation") {

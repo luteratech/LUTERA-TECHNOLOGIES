@@ -24,6 +24,9 @@ def fixture(route):
  if action=='business/dashboard':return reply({'enquiries':0,'open_projects':0,'overdue_tasks':0,'finance':[]})
  if action=='business/list':return reply({'rows':[],'more':False})
  if action=='suite/config':return reply(cfg)
+ if action=='members/save':
+  assert set(body['roles'])=={'editor','finance'} and body['active']
+  member=next(m for m in state['members'] if m['email']==body['email']);member.update({'role':'finance','roles':body['roles']});return reply({'success':True})
  if action=='suite/setup':
   assert body['version']==cfg['setup']['version'];cfg['setup']={'payload':body['data'],'version':body['version']+1};cfg['accounting_enabled']=body['data']['accounting']['enabled'];return reply(cfg['setup'])
  if action=='suite/accounts':return reply(accounts)
@@ -107,6 +110,23 @@ with sync_playwright() as p:
   assert not report['violations'],[(x['id'],x['help'],[(n['target'],n['failureSummary']) for n in x['nodes']]) for x in report['violations']]
   page.screenshot(path=str(out/f'owner-signing-{width}.png'),full_page=True)
  page.set_viewport_size({'width':1280,'height':1000});go(page,'Administration','Business permissions')
- page.get_by_label('Approved colleague',exact=True).select_option('staff@example.invalid');page.get_by_label('Job title or responsibility label',exact=True).fill('Accountant');page.get_by_label('May post balanced accounting journals',exact=True).check();page.get_by_role('button',name='Save responsibilities',exact=True).click();page.get_by_text('Responsibilities and authority saved.',exact=True).wait_for()
+ page.get_by_label('Approved colleague',exact=True).select_option('staff@example.invalid');page.get_by_label('Job title or responsibility label',exact=True).fill('Accountant');page.get_by_role('button',name=re.compile('^Approval authorities')).click();page.get_by_role('dialog').get_by_label('May post balanced accounting journals',exact=True).check();page.get_by_role('dialog').get_by_label('May sign authorised documents with their own signature',exact=True).check();page.get_by_role('dialog').get_by_role('button',name='Done',exact=True).click();page.get_by_role('button',name='Save responsibilities',exact=True).click();page.get_by_text('Responsibilities and authority saved.',exact=True).wait_for()
+ assert cfg['responsibilities'][0]['ledger_post'] and cfg['responsibilities'][0]['sign_documents']
+ go(page,'Administration','User access')
+ page.get_by_label('Email',exact=True).fill('staff@example.invalid')
+ picker=page.get_by_role('button',name=re.compile('^Workspace roles'))
+ picker.click();panel=page.get_by_role('dialog')
+ panel.get_by_role('checkbox',name=re.compile('^Website administrator')).check();panel.get_by_role('checkbox',name='Accountant / finance',exact=False).check();panel.get_by_role('button',name='Done',exact=True).click()
+ page.get_by_role('button',name='Remove Staff',exact=True).click()
+ page.get_by_role('button',name='Approve account',exact=True).click();page.get_by_text('Workspace roles saved.',exact=False).wait_for()
+ row=page.locator('.record-row').filter(has_text='staff@example.invalid');expect(row).to_contain_text('Website administrator');expect(row).to_contain_text('Accountant / finance')
+ row.get_by_role('button',name='Edit roles',exact=True).click();picker=page.get_by_role('button',name=re.compile('^Workspace roles'));picker.focus();picker.press('ArrowDown');search=page.get_by_label('Search workspace roles',exact=True);expect(search).to_be_focused();search.fill('designer');expect(page.get_by_role('dialog').get_by_role('checkbox')).to_have_count(1);search.press('Escape');expect(picker).to_be_focused()
+ picker.click()
+ for viewport in [390,768,1280]:
+  page.set_viewport_size({'width':viewport,'height':900});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),viewport
+  page.add_script_tag(content=axe);report=page.evaluate("async()=>await axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa']}})")
+  assert not report['violations'],[(x['id'],[(n['target'],n['failureSummary']) for n in x['nodes']]) for x in report['violations']]
+  page.screenshot(path=str(out/f'role-picker-{viewport}.png'),full_page=True)
+ page.get_by_role('dialog').get_by_role('button',name='Done',exact=True).click()
  assert not errors,errors;b.close()
 print('PASS: deferred tax setup, protected owner settings, accounting activation, journal correction/posting, reports/closing, personal signature, exact-document preview, signing consent/MFA cooldown, colleague responsibilities, 320–1280 layouts and axe. All writes used isolated UI fixtures.')

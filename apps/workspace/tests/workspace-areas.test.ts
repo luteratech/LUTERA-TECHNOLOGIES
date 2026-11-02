@@ -107,3 +107,10 @@ test("shared editors resolve to their correct department and preserve old URLs",
     workspaceTools.length,
   );
 });
+
+test("multiple membership roles combine visibility without acquiring Owner controls", () => {
+ const tools = visibleTools(["editor", "designer"], {owner:false,access:{} as never});
+ assert.ok(tools.some(t=>t.department==="website"));
+ assert.ok(tools.some(t=>t.department==="people"));
+ assert.ok(!tools.some(t=>t.id==="users" || t.capability==="members" || t.capability==="backup"));
+});

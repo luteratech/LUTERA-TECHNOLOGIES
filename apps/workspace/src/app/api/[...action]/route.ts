@@ -111,7 +111,7 @@ async function identity() {
   const member = check(
     await db
       .from("work_members")
-      .select("email,role,active")
+      .select("email,role,roles,active")
       .eq("user_id", data.user.id)
       .maybeSingle(),
   );
@@ -120,7 +120,12 @@ async function identity() {
       "Your account has not been approved for this workspace",
       403,
     );
-  return { db, user: data.user, role: member.role as Role };
+  return {
+    db,
+    user: data.user,
+    role: member.role as Role,
+    roles: (member.roles || [member.role]) as Role[],
+  };
 }
 async function authorize(area?: string) {
   const auth = await identity();
@@ -132,7 +137,7 @@ async function authorize(area?: string) {
   const allowed = check(
     await auth.db.rpc("work_has_access", { area: area || "session" }),
   );
-  if (!allowed || (area && !can(auth.role, area)))
+  if (!allowed || (area && !can(auth.roles, area)))
     throw new Failure(
       "Your session expired or this action is not allowed. Sign in again.",
       403,
@@ -230,6 +235,7 @@ export async function GET(
       return ok({
         email: auth.user.email,
         role: auth.role,
+        roles: auth.roles,
         verified,
         factors: factors.totp
           .filter((f) => f.status === "verified")
@@ -237,7 +243,7 @@ export async function GET(
       });
     }
     if (action === "state") {
-      const { db, role } = await authorize();
+      const { db, roles: role } = await authorize();
       const read = async (table: string, area: string, order = "created_at") =>
         can(role, area)
           ? check(
@@ -580,12 +586,10 @@ export async function POST(
         }
         uploaded = user.id + "/" + randomUUID() + ".jpg";
         check(
-          await db.storage
-            .from("work-avatars")
-            .upload(uploaded, image, {
-              contentType: "image/jpeg",
-              upsert: false,
-            }),
+          await db.storage.from("work-avatars").upload(uploaded, image, {
+            contentType: "image/jpeg",
+            upsert: false,
+          }),
         );
         path = uploaded;
       }
@@ -944,13 +948,17 @@ export async function POST(
     if (action === "members/save") {
       const { db } = await authorize("members");
       const body = z
-        .object({ email: z.email(), role: z.enum(roles), active: z.boolean() })
+        .object({
+          email: z.email(),
+          roles: z.array(z.enum(roles)).min(1).max(6),
+          active: z.boolean(),
+        })
         .strict()
         .parse(input);
       check(
-        await db.rpc("work_set_member", {
+        await db.rpc("work_set_roles", {
           email_address: body.email,
-          member_role: body.role,
+          member_roles: body.roles,
           enabled: body.active,
         }),
       );
@@ -982,7 +990,12 @@ export async function POST(
             .eq("id", body.id)
             .single(),
         ) as BusinessDocument;
-        bytes = await financialExport(doc, settings, body.format, await documentSignatures(db,"work_documents",doc.id));
+        bytes = await financialExport(
+          doc,
+          settings,
+          body.format,
+          await documentSignatures(db, "work_documents", doc.id),
+        );
         name = doc.number || `draft-${doc.id}`;
       } else {
         const staff = check(
@@ -1037,13 +1050,50 @@ export async function POST(
           );
         photos[file] = Buffer.from(await data.arrayBuffer()).toString("base64");
       }
-      const files: Record<string,string>={};
-      const backupAuth=await db.auth.getSession();
-      const backupSession=backupAuth.data.session;
-      if(!backupSession)throw new Failure('Sign in again before creating a backup.',401);
-      const backupStorage=createClient(process.env.SUPABASE_URL!,process.env.SUPABASE_PUBLISHABLE_KEY!,{auth:{persistSession:false,autoRefreshToken:false},global:{headers:{Authorization:'Bearer '+backupSession.access_token,'x-lutera-backup-proof':process.env.BUSINESS_JOB_SECRET||''}}});
-      const manifests=[...(snapshot.work_files||[]).map((f:{path:string})=>({bucket:'work-evidence',path:f.path})),...(snapshot.work_profiles||[]).filter((p:{avatar_path:string})=>p.avatar_path).map((p:{avatar_path:string})=>({bucket:'work-avatars',path:p.avatar_path}))];
-      for(const f of manifests){const file=check(await backupStorage.storage.from(f.bucket).download(f.path));size+=file.size;if(size>40000000)throw new Failure('Use the full database and storage backup procedure for this archive.',413);files[f.bucket+'/'+f.path]=Buffer.from(await file.arrayBuffer()).toString('base64')}
+      const files: Record<string, string> = {};
+      const backupAuth = await db.auth.getSession();
+      const backupSession = backupAuth.data.session;
+      if (!backupSession)
+        throw new Failure("Sign in again before creating a backup.", 401);
+      const backupStorage = createClient(
+        process.env.SUPABASE_URL!,
+        process.env.SUPABASE_PUBLISHABLE_KEY!,
+        {
+          auth: { persistSession: false, autoRefreshToken: false },
+          global: {
+            headers: {
+              Authorization: "Bearer " + backupSession.access_token,
+              "x-lutera-backup-proof": process.env.BUSINESS_JOB_SECRET || "",
+            },
+          },
+        },
+      );
+      const manifests = [
+        ...(snapshot.work_files || []).map((f: { path: string }) => ({
+          bucket: "work-evidence",
+          path: f.path,
+        })),
+        ...(snapshot.work_profiles || [])
+          .filter((p: { avatar_path: string }) => p.avatar_path)
+          .map((p: { avatar_path: string }) => ({
+            bucket: "work-avatars",
+            path: p.avatar_path,
+          })),
+      ];
+      for (const f of manifests) {
+        const file = check(
+          await backupStorage.storage.from(f.bucket).download(f.path),
+        );
+        size += file.size;
+        if (size > 40000000)
+          throw new Failure(
+            "Use the full database and storage backup procedure for this archive.",
+            413,
+          );
+        files[f.bucket + "/" + f.path] = Buffer.from(
+          await file.arrayBuffer(),
+        ).toString("base64");
+      }
       const bytes = await encryptBackup(
         {
           format: "lutera-records-v1",

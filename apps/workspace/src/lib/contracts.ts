@@ -29,8 +29,10 @@ export const permissions: Record<string, readonly Role[]> = {
   members: ["owner"],
   backup: ["owner"],
 };
-export const can = (role: Role, area: string) =>
-  permissions[area]?.includes(role) ?? false;
+export const can = (role: Role | readonly Role[], area: string) =>
+  (Array.isArray(role) ? role : [role]).some(
+    (r) => permissions[area]?.includes(r) ?? false,
+  );
 export const icons = [
   "procurement",
   "hardware",

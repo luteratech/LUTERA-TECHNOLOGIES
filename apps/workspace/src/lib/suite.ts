@@ -111,7 +111,7 @@ export type SuiteConfig = {
   closed_through: string | null;
   profile: { full_name: string; capacity: string; image_data: string } | null;
   factors: { id: string; name: string }[];
-  members: { email: string; role: string; active: boolean }[];
+  members: { email: string; role: string; roles?: string[]; active: boolean }[];
   responsibilities: {
     email: string;
     title: string;

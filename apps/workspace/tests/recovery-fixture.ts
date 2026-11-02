@@ -28,12 +28,14 @@ async function main() {
     stock: snapshot.work_stock.length,
     counters: snapshot["private.work_counters"].length,
   };
+  const legacyCompatible = structuredClone(snapshot);
+  if (legacyCompatible.work_members.length) delete legacyCompatible.work_members[0].roles;
   const check = `DO $$BEGIN IF (SELECT count(*) FROM public.work_customers)<>${expected.customers} OR (SELECT count(*) FROM public.work_payments)<>${expected.payments} OR (SELECT count(*) FROM public.work_commercial WHERE kind='invoice')<>${expected.invoices} OR (SELECT count(*) FROM public.work_stock)<>${expected.stock} OR (SELECT count(*) FROM private.work_counters)<>${expected.counters} THEN RAISE EXCEPTION 'Restored records or counters did not reconcile';END IF;IF EXISTS(SELECT 1 FROM public.work_members WHERE active) OR EXISTS(SELECT 1 FROM public.work_portal_members WHERE active) THEN RAISE EXCEPTION 'Restored access was enabled prematurely';END IF;END;$$;\nSET ROLE anon;DO $$DECLARE t text;n bigint;BEGIN FOREACH t IN ARRAY ARRAY['work_customers','work_payments'] LOOP BEGIN EXECUTE format('SELECT count(*) FROM public.%I',t) INTO n;IF n>0 THEN RAISE EXCEPTION 'Restored access policies leaked business data';END IF;EXCEPTION WHEN insufficient_privilege THEN NULL;END;END LOOP;END;$$;RESET ROLE;`;
   await writeFile(
     output,
     seed +
       "SELECT set_config('lutera.isolated_restore','confirmed',false);\n" +
-      recoverySQL(restored) +
+      recoverySQL(legacyCompatible) +
       "\n" +
       check,
     { mode: 0o600 },

@@ -2,8 +2,8 @@
 import { useEffect, useState } from "react";
 import UserResponsibilities from "./UserResponsibilities";
 import { api } from "@/lib/client";
-import { EntryForm, type BusinessConfig } from "./BusinessWorkspace";
-import { field } from "./business-fields";
+import type { BusinessConfig } from "./BusinessWorkspace";
+import DepartmentAccess from "./DepartmentAccess";
 import type { Row } from "@/lib/business";
 export default function BusinessAccess({
   config,
@@ -31,32 +31,9 @@ export default function BusinessAccess({
     return <p>The company owner manages business permissions.</p>;
   if (editing)
     return (
-      <EntryForm
-        title="Configure business access"
-        config={config}
-        button="Save access rules"
+      <DepartmentAccess
         onBack={() => setEditing(false)}
-        fields={[
-          field("email", "Approved staff email", "email", true),
-          field("area", "Business area", "select", true, [
-            "sales",
-            "finance",
-            "procurement",
-            "inventory",
-            "projects",
-            "support",
-            "reports",
-          ]),
-          field("scope", "Record scope", "select", true, ["assigned", "all"]),
-          field("write_access", "May create and edit records", "checkbox"),
-          field("approve_access", "May approve sensitive actions", "checkbox"),
-        ]}
-        submit={async (values, requestKey) => {
-          await api("business/misc", {
-            action: "grant",
-            ...values,
-            request_key: requestKey,
-          });
+        saved={async () => {
           setEditing(false);
           setMessage("Business permissions saved.");
           await load();

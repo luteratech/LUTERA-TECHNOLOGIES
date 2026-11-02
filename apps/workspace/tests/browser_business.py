@@ -21,7 +21,7 @@ def fixture(route):
  if action=='session':return reply({'email':'ui@example.invalid','role':'owner','verified':True,'factors':[]})
  if action=='state':return reply(state)
  if action=='business/config':return reply(conf)
- if action=='suite/config':return reply({'owner':True,'members':[],'responsibilities':[]})
+ if action=='suite/config':return reply({'owner':True,'members':[{'email':'colleague@example.invalid','role':'staff','active':True}],'responsibilities':[]})
  if action=='business/dashboard':return reply({'enquiries':0,'open_projects':0,'overdue_tasks':0,'finance':[]})
  if action=='business/list':return reply({'rows':rows.get(body['entity'],[]),'more':False})
  if action=='business/detail':
@@ -30,11 +30,10 @@ def fixture(route):
  if action=='business/save':
   assert body['request_key'];c={**body['data'],'id':cid,'version':body['version']+1};rows['customers']=[c];return reply(c)
  if action=='business/file':assert body['data'];return reply({'id':'c2fddfaa-ed8d-41df-a918-e0c698afdb1d'})
- if action=='business/misc':
-  assert body['action']=='grant' and body['email']=='colleague@example.invalid'
-  assert body['area']=='finance' and body['scope']=='assigned'
-  assert body['write_access'] is True and body['approve_access'] is False
-  rows['grants']=[body];return reply({'success':True})
+ if action=='business/grant-areas':
+  assert body['email']=='colleague@example.invalid' and set(body['areas'])=={'finance','procurement'}
+  assert body['scope']=='assigned' and body['edit'] is True and body['approvals']==['procurement']
+  rows['grants']=[{'email':body['email'],'area':a,'scope':body['scope'],'write_access':body['edit'],'approve_access':a in body['approvals']} for a in body['areas']];return reply({'success':True})
  if action=='business/payment':
   assert body['data']['confirmed'] is True and body['data']['evidence_id'];rows['payments']=[{'id':str(uuid.uuid4()),**body['data'],'status':'confirmed','version':1}];return reply(rows['payments'][0])
  if action=='operations/list':
@@ -156,13 +155,19 @@ with sync_playwright() as p:
  page.get_by_role('button',name='Save reminder settings',exact=True).wait_for()
  go(page,'Administration','Business permissions')
  page.get_by_role('button',name='Configure access',exact=True).click()
- page.get_by_label('Approved staff email',exact=False).fill('colleague@example.invalid')
- page.get_by_label('Business area',exact=False).select_option('finance')
+ page.get_by_label('Approved colleague',exact=True).select_option('colleague@example.invalid')
+ page.get_by_role('button',name=re.compile('^Business departments')).click()
+ page.get_by_role('dialog').get_by_role('checkbox',name='Finance',exact=True).check()
+ page.get_by_role('dialog').get_by_role('checkbox',name='Procurement',exact=True).check()
+ page.get_by_role('dialog').get_by_role('button',name='Done',exact=True).click()
+ page.get_by_role('button',name=re.compile('^Department approval authority')).click()
+ page.get_by_role('dialog').get_by_role('checkbox',name='Procurement',exact=True).check()
+ page.get_by_role('dialog').get_by_role('button',name='Done',exact=True).click()
  page.get_by_label('Record scope',exact=False).select_option('assigned')
  page.get_by_label('May create and edit records',exact=False).check()
  page.get_by_role('button',name='Save access rules',exact=True).click()
  page.get_by_text('Business permissions saved.',exact=True).wait_for()
- page.get_by_role('cell',name='colleague@example.invalid',exact=True).wait_for()
+ expect(page.get_by_role('cell',name='colleague@example.invalid',exact=True)).to_have_count(2)
  # New navigation history: module/list/record restoration, native browser controls,
  # cancelled unsaved navigation, branching, reload and blocked browser storage.
  nav=c.new_page();nav.set_viewport_size({'width':1280,'height':900})

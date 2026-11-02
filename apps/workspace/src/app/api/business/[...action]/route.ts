@@ -391,6 +391,53 @@ export async function POST(
     const action = (await context.params).action.join("/");
     const { db, user } = await businessIdentity();
     const raw = await boundedJSON(request);
+    if (action === "grant-areas") {
+      const b = z
+        .object({
+          email: z.email(),
+          areas: z
+            .array(
+              z.enum([
+                "sales",
+                "finance",
+                "procurement",
+                "inventory",
+                "projects",
+                "support",
+                "reports",
+              ]),
+            )
+            .min(1)
+            .max(7),
+          approvals: z
+            .array(
+              z.enum([
+                "sales",
+                "finance",
+                "procurement",
+                "inventory",
+                "projects",
+                "support",
+                "reports",
+              ]),
+            )
+            .max(7),
+          scope: z.enum(["assigned", "all"]),
+          edit: z.boolean(),
+        })
+        .strict()
+        .parse(raw);
+      checked(
+        await db.rpc("work_set_grant_areas", {
+          email_address: b.email,
+          areas: b.areas,
+          approvals: b.approvals,
+          record_scope: b.scope,
+          edit: b.edit,
+        }),
+      );
+      return ok({ success: true });
+    }
     if (
       action === "backup-run" ||
       action === "backup-recovery-key" ||
@@ -799,7 +846,12 @@ export async function POST(
       const settings =
         d.payload.company ||
         (checked(await db.rpc("work_quote_settings")) as Settings);
-      const bytes = await financialExport(d, settings, b.format, await documentSignatures(db,"work_documents",d.id));
+      const bytes = await financialExport(
+        d,
+        settings,
+        b.format,
+        await documentSignatures(db, "work_documents", d.id),
+      );
       return new Response(new Uint8Array(bytes), {
         headers: {
           "Content-Type": "application/octet-stream",
@@ -1247,7 +1299,12 @@ export async function POST(
         created_at: record.created_at,
         issued_at: record.issued_at,
       } as unknown as BusinessDocument;
-      const bytes = await financialExport(doc, settings, b.format, await documentSignatures(db,"work_commercial",String(record.id)));
+      const bytes = await financialExport(
+        doc,
+        settings,
+        b.format,
+        await documentSignatures(db, "work_commercial", String(record.id)),
+      );
       return new Response(new Uint8Array(bytes), {
         headers: {
           "Content-Type":

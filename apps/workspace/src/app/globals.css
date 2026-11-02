@@ -2586,3 +2586,222 @@ input[type="radio"] {
   min-height: 44px;
   align-items: center;
 }
+
+/* A shared brand treatment for every single-value selector, with native
+   keyboard/type-ahead and mobile picker fallback in unsupported browsers. */
+select {
+  min-width: 0;
+  max-width: 100%;
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23161A3D' stroke-width='1.6'%3E%3Cpath d='m5 7 5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 18px;
+  padding: 11px 40px 11px 12px;
+  cursor: pointer;
+  transition:
+    border-color var(--motion-fast),
+    background-color var(--motion-fast);
+}
+select:hover:not(:disabled) {
+  border-color: var(--blue);
+}
+select:disabled {
+  cursor: not-allowed;
+}
+@supports (appearance: base-select) {
+  select:not([multiple]),
+  select:not([multiple])::picker(select) {
+    appearance: base-select;
+  }
+  select:not([multiple]) {
+    background-image: none;
+    padding-right: 12px;
+    align-items: center;
+    gap: 12px;
+  }
+  select::picker-icon {
+    color: var(--navy);
+    transition: rotate var(--motion-fast);
+  }
+  select:open::picker-icon {
+    rotate: 180deg;
+  }
+  select::picker(select) {
+    background: var(--surface);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 6px;
+    margin-block: 6px;
+    box-shadow: var(--elev-raised);
+    max-block-size: min(360px, 60dvh);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  select option {
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    gap: 12px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  select option:hover,
+  select option:focus-visible {
+    background: var(--surface-warm);
+    color: var(--navy);
+    outline-offset: -2px;
+  }
+  select option:checked {
+    background: var(--surface-warm);
+    color: var(--navy);
+    font-weight: 500;
+  }
+  select option::checkmark {
+    color: var(--blue);
+    margin-left: auto;
+    order: 1;
+  }
+}
+.multi-picker {
+  position: relative;
+  font-weight: 500;
+}
+.multi-picker > span {
+  color: var(--fg-2);
+  text-transform: none;
+}
+.multi-picker .multi-picker-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--navy);
+  text-align: left;
+  font-size: 14px;
+  font-weight: 400;
+}
+.multi-picker .multi-picker-trigger:hover:not(:disabled),
+.multi-picker-trigger[aria-expanded="true"] {
+  background: var(--surface);
+  border-color: var(--blue);
+}
+.selection-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0;
+  margin: 2px 0 0;
+  list-style: none;
+}
+.selection-tags li {
+  display: inline-flex;
+  align-items: center;
+  padding-left: 12px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-warm);
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 500;
+}
+.selection-tags button {
+  border: 0;
+  color: var(--navy);
+  background: transparent;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  font-size: 20px;
+}
+.selection-tags button:hover:not(:disabled) {
+  background: var(--surface-warm);
+  color: var(--blue);
+}
+.multi-picker-panel {
+  position: absolute;
+  top: 72px;
+  left: 0;
+  right: 0;
+  min-width: min(300px, 100%);
+  z-index: 25;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elev-raised);
+  color: var(--fg);
+}
+.multi-picker-search {
+  padding: 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.multi-picker-options {
+  max-height: 260px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px;
+}
+.multi-picker-options fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.multi-picker-options p {
+  padding: 12px;
+  margin: 0;
+}
+.multi-picker-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 400;
+}
+.multi-picker-option:hover,
+.multi-picker-option:has(input:checked) {
+  background: var(--surface-warm);
+}
+.multi-picker-option small {
+  margin-top: 4px;
+  font-size: 12px;
+}
+.multi-picker-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-soft);
+  font-size: 12px;
+  color: var(--muted);
+}
+@media (max-width: 639px) {
+  .multi-picker-panel {
+    position: fixed;
+    inset: auto 12px 12px;
+    max-height: calc(100dvh - 90px);
+    z-index: 40;
+  }
+  .multi-picker-options {
+    max-height: min(260px, 40dvh);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  select,
+  select::picker-icon {
+    transition: none;
+  }
+}

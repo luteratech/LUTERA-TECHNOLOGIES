@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client";
+import MultiSelect from "./MultiSelect";
 import { useUnsavedChanges } from "@/lib/unsaved";
 import type { SuiteConfig } from "@/lib/suite";
 export default function UserResponsibilities() {
@@ -93,7 +94,7 @@ export default function UserResponsibilities() {
                 .filter((m) => m.active && m.role !== "owner")
                 .map((m) => (
                   <option key={m.email} value={m.email}>
-                    {m.email} · {m.role}
+                    {m.email} · {(m.roles || [m.role]).join(" · ")}
                   </option>
                 ))}
             </select>
@@ -122,39 +123,33 @@ export default function UserResponsibilities() {
               }}
             />
           </label>
-          <label className="field">
-            <span>May post balanced accounting journals</span>
-            <input
-              type="checkbox"
-              checked={post}
-              onChange={(e) => {
-                setPost(e.target.checked);
-                setDirty(true);
-              }}
-            />
-          </label>
-          <label className="field">
-            <span>May close reconciled accounting periods</span>
-            <input
-              type="checkbox"
-              checked={close}
-              onChange={(e) => {
-                setClose(e.target.checked);
-                setDirty(true);
-              }}
-            />
-          </label>
-          <label className="field">
-            <span>May sign authorised documents with their own signature</span>
-            <input
-              type="checkbox"
-              checked={sign}
-              onChange={(e) => {
-                setSign(e.target.checked);
-                setDirty(true);
-              }}
-            />
-          </label>
+          <MultiSelect
+            label="Approval authorities"
+            options={[
+              { value: "post", label: "May post balanced accounting journals" },
+              {
+                value: "close",
+                label: "May close reconciled accounting periods",
+              },
+              {
+                value: "sign",
+                label: "May sign authorised documents with their own signature",
+              },
+            ]}
+            value={[
+              ...(post ? ["post"] : []),
+              ...(close ? ["close"] : []),
+              ...(sign ? ["sign"] : []),
+            ]}
+            onChange={(next) => {
+              setPost(next.includes("post"));
+              setClose(next.includes("close"));
+              setSign(next.includes("sign"));
+              setDirty(true);
+            }}
+            disabled={busy}
+            hint="Choose any combination. Each action also requires access to its underlying business records."
+          />
         </div>
         <p>
           Permissions do not authorise using another person’s signature.

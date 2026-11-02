@@ -60,6 +60,7 @@ import BusinessWorkspace, {
   type BusinessConfig,
 } from "./BusinessWorkspace";
 import PasswordInput from "./PasswordInput";
+import MultiSelect from "./MultiSelect";
 import { api, saveFile } from "@/lib/client";
 export { api, saveFile } from "@/lib/client";
 import { useCooldown } from "@/lib/cooldown";
@@ -68,6 +69,7 @@ import { mayLeave, useUnsavedChanges } from "@/lib/unsaved";
 export type Session = {
   email: string;
   role: Role;
+  roles?: Role[];
   verified: boolean;
   factors: { id: string; name: string }[];
 };
@@ -82,7 +84,7 @@ export type State = {
     entity_id: string;
     created_at: string;
   }[];
-  members: { email: string; role: Role; active: boolean }[];
+  members: { email: string; role: Role; roles?: Role[]; active: boolean }[];
   content: { content: SiteContent; version: number } | null;
   settings: { payload: Settings; version: number } | null;
   publications: { id: string; status: string; created_at: string }[];
@@ -137,7 +139,9 @@ export default function Workspace() {
       setSession(next);
       if (
         next.verified &&
-        (!previous?.verified || previous.role !== next.role)
+        (!previous?.verified ||
+          previous.role !== next.role ||
+          JSON.stringify(previous.roles) !== JSON.stringify(next.roles))
       ) {
         setTab(
           new URLSearchParams(window.location.search).get("account") ===
@@ -235,7 +239,9 @@ export default function Workspace() {
       setBusy(false);
     }
   }
-  const tools = session ? visibleTools(session.role, accessConfig) : [];
+  const tools = session
+    ? visibleTools(session.roles || [session.role], accessConfig)
+    : [];
   const params = new URLSearchParams(routeSearch);
   const currentTool = toolAt(tab, params, tools);
   const departmentId = departmentFor(tab, params);
@@ -298,7 +304,11 @@ export default function Workspace() {
       activeTool={currentTool?.id}
       onNavigate={openDestination}
       email={session.email}
-      role={session.role}
+      role={
+        session.roles && session.roles.length > 1
+          ? `${session.roles.length} assigned roles`
+          : session.role
+      }
       busy={busy}
       onSignout={signout}
     >
@@ -393,7 +403,8 @@ export default function Workspace() {
         )}
         {!data ? (
           <Notice>Loading your records…</Notice>
-        ) : requiredCapability && !can(session.role, requiredCapability) ? (
+        ) : requiredCapability &&
+          !can(session.roles || [session.role], requiredCapability) ? (
           <Notice>
             Your account does not have access to this tool. Choose a tool from
             your workspace menu.
@@ -506,7 +517,11 @@ export default function Workspace() {
               <BusinessAccess config={accessConfig} />
             )}
             {tab === "members" && (
-              <Members records={data.members} refresh={refresh} />
+              <Members
+                records={data.members}
+                refresh={refresh}
+                currentEmail={session.email}
+              />
             )}
             {tab === "controls" && <OperationsDesk department={departmentId} />}
             {tab === "audit" && <BusinessActivity />}
@@ -868,26 +883,76 @@ function SettingsEditor({
     </form>
   );
 }
+const roleChoices = [
+  {
+    value: "staff",
+    label: "Staff",
+    description: "Use separately assigned business departments.",
+  },
+  {
+    value: "editor",
+    label: "Website administrator",
+    description: "Edit and publish public-site content.",
+  },
+  {
+    value: "finance",
+    label: "Accountant / finance",
+    description:
+      "Use finance documents, sales and reports. Approval is separate.",
+  },
+  {
+    value: "designer",
+    label: "Staff cards designer",
+    description: "Manage staff profiles and card exports.",
+  },
+  {
+    value: "admin",
+    label: "Operations administrator",
+    description:
+      "Broad workspace access; approval and owner controls stay separate.",
+  },
+  {
+    value: "owner",
+    label: "Owner",
+    description: "Full control. Owner is selected on its own.",
+  },
+];
 function Members({
   records,
   refresh,
+  currentEmail,
 }: {
   records: State["members"];
   refresh: () => Promise<void>;
+  currentEmail: string;
 }) {
   const [busy, setBusy] = useState(false),
-    [message, setMessage] = useState("");
-  async function save(email: string, role: Role, active: boolean) {
+    [message, setMessage] = useState(""),
+    [error, setError] = useState(""),
+    [selectedRoles, setSelectedRoles] = useState<string[]>(["staff"]),
+    [editing, setEditing] = useState<State["members"][number] | null>(null),
+    [email, setEmail] = useState("");
+  const selectRoles = (next: string[]) =>
+    setSelectedRoles(
+      next.includes("owner") && !selectedRoles.includes("owner")
+        ? ["owner"]
+        : next.filter((r) => r !== "owner"),
+    );
+  async function save(address: string, assigned: string[], active: boolean) {
     setBusy(true);
     setMessage("");
+    setError("");
     try {
-      await api("members/save", { email, role, active });
+      await api("members/save", { email: address, roles: assigned, active });
       await refresh();
       setMessage(
-        "Access rule saved. Newly approved users still need a verified Supabase Auth account before they can sign in.",
+        "Workspace roles saved. Business department access and approval authority are managed under Business permissions.",
       );
+      setEditing(null);
+      setEmail("");
+      setSelectedRoles(["staff"]);
     } catch (e) {
-      setMessage((e as Error).message);
+      setError((e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -898,51 +963,64 @@ function Members({
         className="panel"
         onSubmit={(e) => {
           e.preventDefault();
-          const form = new FormData(e.currentTarget);
-          void save(String(form.get("email")), form.get("role") as Role, true);
+          void save(email, selectedRoles, editing?.active ?? true);
         }}
       >
-        <h2>Approve a colleague</h2>
+        <h2>{editing ? "Edit colleague roles" : "Approve a colleague"}</h2>
         <p>
-          You retain Owner control. Start colleagues with Staff and grant only
-          the business areas they need. Finance is the accountant role, Editor
-          manages the website, and Designer manages cards. Add their
-          responsibilities and signing/posting authority under Business
-          permissions. Every role requires MFA.
+          Assign several workspace roles to one person. Use Business permissions
+          for Sales, Procurement, Projects and other departments, including
+          separate approval, posting, closing and signing authority. All
+          accounts require MFA.
         </p>
         <div className="form-grid">
           <Field label="Email">
-            <input type="email" name="email" required maxLength={254} />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              maxLength={254}
+              disabled={!!editing || busy}
+            />
           </Field>
-          <Field label="Role">
-            <select name="role" defaultValue="staff">
-              {roles.map((role) => (
-                <option key={role} value={role}>
-                  {
-                    (
-                      {
-                        owner: "Owner",
-                        admin: "Operations administrator",
-                        editor: "Website administrator",
-                        finance: "Accountant / finance",
-                        designer: "Staff cards designer",
-                        staff: "Staff — explicit business grants",
-                      } as Record<string, string>
-                    )[role]
-                  }
-                </option>
-              ))}
-            </select>
-          </Field>
+          <MultiSelect
+            label="Workspace roles"
+            options={roleChoices}
+            value={selectedRoles}
+            onChange={selectRoles}
+            required
+            disabled={busy}
+            hint="Permissions combine. Owner already includes every role and is selected alone."
+          />
         </div>
-        <button disabled={busy}>Approve account</button>
+        <div className="actions">
+          <button disabled={busy || !selectedRoles.length}>
+            {editing ? "Save colleague roles" : "Approve account"}
+          </button>
+          {editing && (
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => {
+                setEditing(null);
+                setEmail("");
+                setSelectedRoles(["staff"]);
+              }}
+            >
+              Cancel editing
+            </button>
+          )}
+        </div>
         {message && <Notice>{message}</Notice>}
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
         <Notice>
-          Approval does not send an email or create a password. Create the
-          colleague’s account or send an invitation in the Supabase
-          Authentication dashboard using the approved email. Branded email
-          invitations let each person choose their own password. Never share
-          passwords through this workspace.
+          Approval does not create a password or send an invitation. Use the
+          verified account invitation process; never share passwords.
         </Notice>
       </form>
       <section className="panel">
@@ -952,16 +1030,41 @@ function Members({
             <div>
               <strong>{member.email}</strong>
               <small>
-                {member.role} · {member.active ? "Active" : "Disabled"}
+                {(member.roles || [member.role])
+                  .map(
+                    (r) => roleChoices.find((o) => o.value === r)?.label || r,
+                  )
+                  .join(" · ")}{" "}
+                · {member.active ? "Active" : "Disabled"}
               </small>
             </div>
-            <button
-              className="secondary"
-              disabled={busy}
-              onClick={() => save(member.email, member.role, !member.active)}
-            >
-              {member.active ? "Disable" : "Enable"}
-            </button>
+            <div className="actions">
+              <button
+                className="secondary"
+                disabled={busy || member.email === currentEmail}
+                onClick={() => {
+                  setEditing(member);
+                  setEmail(member.email);
+                  setSelectedRoles(member.roles || [member.role]);
+                  setMessage("");
+                }}
+              >
+                Edit roles
+              </button>
+              <button
+                className="secondary"
+                disabled={busy || member.email === currentEmail}
+                onClick={() =>
+                  void save(
+                    member.email,
+                    member.roles || [member.role],
+                    !member.active,
+                  )
+                }
+              >
+                {member.active ? "Disable" : "Enable"}
+              </button>
+            </div>
           </div>
         ))}
       </section>
