@@ -2563,7 +2563,8 @@ input[type="radio"] {
   grid-row: 1;
 }
 .welcome h2,
-.auth-brand h1 {
+.auth-brand h1,
+.card-preview.back h3 {
   color: white;
 }
 .department-intro,
