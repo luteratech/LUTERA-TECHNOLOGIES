@@ -448,7 +448,11 @@ export async function POST(
       z.object({ confirmed: z.literal(true) })
         .strict()
         .parse(raw);
-      if (action === "backup-run") return ok(await runBusinessBackup());
+      if (action === "backup-run") {
+        const result = await runBusinessBackup();
+        const latest = await db.from("work_backup_runs").select("id,day,status,created_at,bytes,file_count").order("created_at",{ascending:false}).limit(1).maybeSingle();
+        return ok({...result,latest:latest.error ? null : latest.data});
+      }
       if (action === "backup-drive-setup") {
         if (!process.env.DRIVE_BACKUP_SECRET)
           throw new BusinessError(

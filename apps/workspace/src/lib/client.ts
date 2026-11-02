@@ -1,5 +1,12 @@
 "use client";
+import {
+  appNotice,
+  dismissNotice,
+  feedbackText,
+  clearNotices,
+} from "./notifications";
 export class ApiError extends Error {
+  notified = false;
   constructor(
     message: string,
     public status = 0,
@@ -8,7 +15,7 @@ export class ApiError extends Error {
     super(message);
   }
 }
-export async function api<T = unknown>(
+async function requestAPI<T = unknown>(
   action: string,
   body?: unknown,
 ): Promise<T> {
@@ -36,13 +43,15 @@ export async function api<T = unknown>(
   }
   if (!response.ok)
     throw new ApiError(
-      result.error || "The request could not be completed.",
+      typeof result?.error === "string"
+        ? result.error
+        : "The request could not be completed.",
       response.status,
       Number(response.headers.get("Retry-After")) || 0,
     );
   return result;
 }
-export async function saveFile(action: string, body: unknown) {
+async function downloadFile(action: string, body: unknown) {
   let response: Response;
   try {
     response = await fetch(`/api/${action}`, {
@@ -71,4 +80,66 @@ export async function saveFile(action: string, body: unknown) {
       ?.match(/filename="([^"]+)"/)?.[1] || "lutera-export";
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export async function api<T = unknown>(
+  action: string,
+  body?: unknown,
+  options: { notifications?: boolean } = {},
+): Promise<T> {
+  const id = crypto.randomUUID();
+  const enabled = options.notifications !== false && action !== "session";
+  const timer =
+    enabled && body !== undefined && action !== "records"
+      ? setTimeout(
+          () =>
+            appNotice(
+              "Your request is still processing. The result will appear here.",
+              "loading",
+              { id },
+            ),
+          800,
+        )
+      : undefined;
+  try {
+    const result = await requestAPI<T>(action, body);
+    if (action === "auth/signout" || action === "portal/signout")
+      clearNotices();
+    return result;
+  } catch (error) {
+    if (enabled) {
+      appNotice(feedbackText(error), "error");
+      if (error instanceof ApiError) error.notified = true;
+    }
+    throw error;
+  } finally {
+    if (timer) clearTimeout(timer);
+    dismissNotice(id);
+  }
+}
+export async function saveFile(action: string, body: unknown) {
+  const id = crypto.randomUUID();
+  const timer = setTimeout(
+    () =>
+      appNotice("Preparing your file for download…", "loading", {
+        id,
+        title: "Preparing download",
+      }),
+    500,
+  );
+  try {
+    await downloadFile(action, body);
+    appNotice(
+      "Your file is ready. Your browser will handle saving it.",
+      "success",
+      { title: "Download ready" },
+    );
+  } catch (error) {
+    appNotice(feedbackText(error), "error");
+    if (error instanceof ApiError) error.notified = true;
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    dismissNotice(id);
+  }
 }

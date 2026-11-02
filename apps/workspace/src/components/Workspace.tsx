@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback, clearNotices } from "@/lib/notifications";
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import {
@@ -120,7 +121,7 @@ export default function Workspace() {
     [routeSearch, setRouteSearch] = useState(""),
     [documentId, setDocumentId] = useState<string | undefined>(undefined),
     [navigationVersion, setNavigationVersion] = useState(0),
-    [error, setError] = useState(""),
+    [error, setError] = useFeedback("error"),
     [busy, setBusy] = useState(false);
   const activeSession = useRef<Session | null>(null);
   const refresh = useCallback(async () => {
@@ -162,6 +163,7 @@ export default function Workspace() {
       }
       if (!next.verified) setData(null);
     } catch {
+      if (activeSession.current) clearNotices();
       activeSession.current = null;
       setSession(null);
       setData(null);
@@ -195,8 +197,8 @@ export default function Workspace() {
       );
     }
   });
-  const openDestination = (target: Destination) => {
-    if (!mayLeave()) return false;
+  const openDestination = async (target: Destination) => {
+    if (!(await mayLeave())) return false;
     workspaceLocation({
       section: target.section,
       module: null,
@@ -224,7 +226,7 @@ export default function Workspace() {
   const goToSection = (area: string, id?: string) =>
     openDestination({ section: area, params: id ? { document: id } : {} });
   async function signout() {
-    if (!mayLeave()) return;
+    if (!(await mayLeave())) return;
     setBusy(true);
     setError("");
     try {
@@ -234,7 +236,7 @@ export default function Workspace() {
       setData(null);
       setTab("overview");
     } catch (e) {
-      setError((e as Error).message);
+      setError(e as Error);
     } finally {
       setBusy(false);
     }
@@ -389,18 +391,14 @@ export default function Workspace() {
           </div>
           <button
             className="secondary"
-            onClick={() => {
-              if (mayLeave()) refresh().catch((e) => setError(e.message));
+            onClick={async () => {
+              if (await mayLeave()) refresh().catch((e) => setError(e));
             }}
           >
             Refresh
           </button>
         </div>
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
+        {error && null}
         {!data ? (
           <Notice>Loading your records…</Notice>
         ) : requiredCapability &&
@@ -559,7 +557,7 @@ export default function Workspace() {
 function Login({ onSuccess }: { onSuccess: () => Promise<void> }) {
   const cooldown = useCooldown();
   const [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useFeedback("error");
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -573,7 +571,7 @@ function Login({ onSuccess }: { onSuccess: () => Promise<void> }) {
       await onSuccess();
     } catch (e) {
       cooldown.handle(e);
-      setError((e as Error).message);
+      setError(e as Error);
     } finally {
       setBusy(false);
     }
@@ -626,11 +624,7 @@ function Login({ onSuccess }: { onSuccess: () => Promise<void> }) {
             required
             maxLength={256}
           />
-          {error && (
-            <p className="error" role="alert">
-              {error}
-            </p>
-          )}
+          {error && null}
           <button disabled={busy || cooldown.seconds > 0}>
             {cooldown.seconds > 0
               ? `Try again in ${cooldown.seconds}s`
@@ -663,7 +657,7 @@ function MFA({
       secret: string;
     } | null>(null),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useFeedback("error");
   async function enroll() {
     setBusy(true);
     setError("");
@@ -671,7 +665,7 @@ function MFA({
       setEnrollment(await api("mfa/enroll", {}));
     } catch (e) {
       cooldown.handle(e);
-      setError((e as Error).message);
+      setError(e as Error);
     } finally {
       setBusy(false);
     }
@@ -690,7 +684,7 @@ function MFA({
       await onSuccess();
     } catch (e) {
       cooldown.handle(e);
-      setError((e as Error).message);
+      setError(e as Error);
     } finally {
       setBusy(false);
     }
@@ -772,11 +766,7 @@ function MFA({
             </button>
           </form>
         )}
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
+        {error && null}
         <button className="text-button" onClick={onSignout}>
           Return to sign in
         </button>
@@ -795,7 +785,7 @@ function SettingsEditor({
 }) {
   const [value, setValue] = useState(initial.payload),
     [busy, setBusy] = useState(false),
-    [message, setMessage] = useState("");
+    [message, setMessage] = useFeedback();
   useEffect(() => setValue(initial.payload), [initial]);
   useUnsavedChanges(JSON.stringify(value) !== JSON.stringify(initial.payload));
   async function submit(e: React.FormEvent) {
@@ -809,7 +799,7 @@ function SettingsEditor({
         "Company document settings saved. Issued documents keep their original company snapshot.",
       );
     } catch (error) {
-      setMessage((error as Error).message);
+      setMessage(error as Error);
     } finally {
       setBusy(false);
     }
@@ -880,7 +870,6 @@ function SettingsEditor({
       <button disabled={busy}>
         {busy ? "Saving…" : "Save company settings"}
       </button>
-      {message && <Notice>{message}</Notice>}
     </form>
   );
 }
@@ -928,8 +917,8 @@ function Members({
   currentEmail: string;
 }) {
   const [busy, setBusy] = useState(false),
-    [message, setMessage] = useState(""),
-    [error, setError] = useState(""),
+    [message, setMessage] = useFeedback(),
+    [error, setError] = useFeedback("error"),
     [selectedRoles, setSelectedRoles] = useState<string[]>(["staff"]),
     [editing, setEditing] = useState<State["members"][number] | null>(null),
     [email, setEmail] = useState("");
@@ -953,7 +942,7 @@ function Members({
       setEmail("");
       setSelectedRoles(["staff"]);
     } catch (e) {
-      setError((e as Error).message);
+      setError(e as Error);
     } finally {
       setBusy(false);
     }
@@ -1013,12 +1002,8 @@ function Members({
             </button>
           )}
         </div>
-        {message && <Notice>{message}</Notice>}
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
+
+        {error && null}
         <Notice>
           Approval does not create a password or send an invitation. Use the
           verified account invitation process; never share passwords.
@@ -1074,7 +1059,7 @@ function Members({
 }
 function Backups() {
   const [busy, setBusy] = useState(false),
-    [message, setMessage] = useState("");
+    [message, setMessage] = useFeedback();
   return (
     <form
       className="panel"
@@ -1083,7 +1068,7 @@ function Backups() {
         const form = e.currentTarget,
           values = new FormData(form);
         if (values.get("password") !== values.get("confirmation")) {
-          setMessage("Backup passwords must match");
+          setMessage(new Error("Backup passwords must match"));
           return;
         }
         setBusy(true);
@@ -1095,7 +1080,7 @@ function Backups() {
             "Encrypted backup downloaded. Keep it in a company-controlled backup location and store its password separately.",
           );
         } catch (error) {
-          setMessage((error as Error).message);
+          setMessage(error as Error);
         } finally {
           setBusy(false);
         }
@@ -1129,7 +1114,7 @@ function Backups() {
       <button disabled={busy}>
         {busy ? "Encrypting backup…" : "Download encrypted backup"}
       </button>
-      {message && <Notice>{message}</Notice>}
+
       <p className="muted">
         Keep the password safe: it cannot be recovered. Restore procedures and a
         local backup-verification tool are included in the deployment runbook.

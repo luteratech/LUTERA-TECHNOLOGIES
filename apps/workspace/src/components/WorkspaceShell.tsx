@@ -22,7 +22,7 @@ export default function WorkspaceShell({
   active: string;
   activeDepartment?: string;
   activeTool?: string;
-  onNavigate: (target: Destination) => boolean | void;
+  onNavigate: (target: Destination) => boolean | void | Promise<boolean | void>;
   email: string;
   role: string;
   busy: boolean;
@@ -39,8 +39,8 @@ export default function WorkspaceShell({
   useEffect(() => {
     if (activeDepartment) setExpanded(activeDepartment);
   }, [activeDepartment]);
-  const choose = (target: Destination) => {
-    if (onNavigate(target) === false) return;
+  const choose = async (target: Destination) => {
+    if ((await onNavigate(target)) === false) return;
     setSearch("");
     setMobileOpen(false);
     if (mobile)

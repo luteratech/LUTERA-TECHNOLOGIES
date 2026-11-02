@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import PasswordInput from "./PasswordInput";
 import { api } from "@/lib/client";
 import { useCooldown } from "@/lib/cooldown";
@@ -15,7 +16,7 @@ export default function EmailConfirmation({
 }) {
   const cooldown = useCooldown();
   const [busy, setBusy] = useState(false),
-    [message, setMessage] = useState("");
+    [message, setMessage] = useFeedback();
   const [completed, setCompleted] = useState(false);
   useEffect(() => {
     // Remove the token from the visible address/history after hydration. It is
@@ -64,7 +65,7 @@ export default function EmailConfirmation({
             expired, contact the company owner for a new one.
           </p>
         ) : completed ? (
-          <p role="status">{message}</p>
+          <p>Next steps: {message}</p>
         ) : (
           <>
             <p>
@@ -86,7 +87,7 @@ export default function EmailConfirmation({
                   invite &&
                   values.get("password") !== values.get("confirmation")
                 ) {
-                  setMessage("Passwords must match.");
+                  setMessage(new Error("Passwords must match."));
                   return;
                 }
                 if (
@@ -94,7 +95,9 @@ export default function EmailConfirmation({
                   passwordIssues(String(values.get("password") || "")).length
                 ) {
                   setMessage(
-                    "Follow all password requirements before continuing.",
+                    new Error(
+                      "Follow all password requirements before continuing.",
+                    ),
                   );
                   return;
                 }
@@ -134,7 +137,7 @@ export default function EmailConfirmation({
                   window.location.replace(data.redirect);
                 } catch (error) {
                   cooldown.handle(error);
-                  setMessage((error as Error).message);
+                  setMessage(error as Error);
                 } finally {
                   setBusy(false);
                 }
@@ -161,11 +164,7 @@ export default function EmailConfirmation({
                   />
                 </>
               )}
-              {message && (
-                <p className="error" role="alert">
-                  {message}
-                </p>
-              )}
+              {message && null}
               <button disabled={busy || cooldown.seconds > 0}>
                 {busy
                   ? "Confirming…"

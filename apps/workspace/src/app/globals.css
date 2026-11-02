@@ -3267,3 +3267,207 @@ textarea[aria-invalid="true"] {
   margin-top: 24px;
   padding-top: 24px;
 }
+
+/* Workspace notifications remain within the application, including modal tools. */
+.app-toast-stack {
+  position: fixed;
+  z-index: 1000;
+  right: 20px;
+  bottom: 84px;
+  width: min(390px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 12px;
+  pointer-events: none;
+}
+.app-toast {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 44px;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--blue);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: var(--elev-raised);
+  animation: app-toast-in 0.2s var(--ease-standard);
+}
+.app-toast[data-tone="error"] {
+  border-left-color: var(--danger);
+}
+.app-toast[data-tone="success"] {
+  border-left-color: var(--success);
+}
+.app-toast strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+}
+.app-toast p {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  color: var(--fg-2);
+}
+.app-toast-icon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  font-weight: 600;
+  color: var(--blue);
+}
+[data-tone="error"] > .app-toast-icon {
+  color: var(--danger);
+}
+[data-tone="success"] > .app-toast-icon {
+  color: var(--success);
+}
+button.app-notice-close {
+  background: transparent;
+  border: 0;
+  color: var(--fg-2);
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0;
+  font-size: 24px;
+  align-self: start;
+}
+button.app-notice-close:hover {
+  background: var(--surface-warm);
+  color: var(--navy);
+}
+.app-notification-bell {
+  position: fixed;
+  z-index: 1000;
+  right: 20px;
+  bottom: 20px;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  box-shadow: var(--elev-raised);
+}
+.app-notification-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  border-radius: 12px;
+  background: var(--navy);
+  color: white;
+  min-width: 22px;
+  padding: 0 4px;
+  border: 2px solid var(--surface);
+  font-size: 12px;
+}
+.app-notification-history {
+  position: fixed;
+  z-index: 1002;
+  right: 20px;
+  bottom: 84px;
+  width: min(400px, calc(100vw - 32px));
+  max-height: min(600px, calc(100dvh - 130px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--elev-raised);
+  color: var(--fg);
+}
+.app-notification-history header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.app-notification-history h2 {
+  font-size: 20px;
+  margin: 0;
+}
+.app-notification-history p {
+  font-size: 14px;
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+.app-notification-history ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.app-notification-history li {
+  border-top: 1px solid var(--border-soft);
+  padding: 16px 0;
+}
+.app-notification-history time {
+  color: var(--muted);
+  font-size: 12px;
+}
+.app-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: app-spin 0.9s linear infinite;
+}
+.app-confirmation {
+  z-index: 1100;
+  padding: 24px;
+}
+.app-confirmation button.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: white;
+}
+.app-confirmation .actions {
+  justify-content: flex-end;
+}
+@keyframes app-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes app-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (max-width: 639px) {
+  .app-toast-stack,
+  .app-notification-history {
+    right: 16px;
+    bottom: 80px;
+  }
+  .app-notification-bell {
+    right: 16px;
+    bottom: 16px;
+  }
+  .app-toast {
+    padding: 12px;
+    gap: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-toast,
+  .app-spinner {
+    animation: none;
+  }
+}
+
+.app-toast-stack {
+  max-height: calc(100dvh - 150px);
+  overflow-y: auto;
+}

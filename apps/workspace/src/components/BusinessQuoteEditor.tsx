@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client";
 import type { BusinessDocument, Settings } from "@/lib/contracts";
@@ -12,7 +13,7 @@ export default function BusinessQuoteEditor({
 }) {
   const [record, setRecord] = useState<BusinessDocument | null>(null),
     [settings, setSettings] = useState<Settings | null>(null),
-    [error, setError] = useState("");
+    [error, setError] = useFeedback("error");
   useEffect(() => {
     let active = true;
     Promise.all([
@@ -26,7 +27,7 @@ export default function BusinessQuoteEditor({
         }
       })
       .catch((e) => {
-        if (active) setError(e.message);
+        if (active) setError(e);
       });
     return () => {
       active = false;
@@ -35,9 +36,7 @@ export default function BusinessQuoteEditor({
   if (error)
     return (
       <section className="panel">
-        <p className="error" role="alert">
-          {error}
-        </p>
+        {null}
         <button className="secondary" onClick={onBack}>
           Back
         </button>

@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback, appNotice } from "@/lib/notifications";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Session } from "./Workspace";
 import { api } from "@/lib/client";
@@ -13,7 +14,7 @@ import { passwordIssues } from "@/lib/password";
 import PasswordInput from "./PasswordInput";
 export default function Account({ session }: { session: Session }) {
   const [info, setInfo] = useState<AccountInfo | null>(null),
-    [loadError, setLoadError] = useState("");
+    [loadError, setLoadError] = useFeedback("error");
   const [name, setName] = useState(""),
     [phone, setPhone] = useState(""),
     [photo, setPhoto] = useState(""),
@@ -30,12 +31,7 @@ export default function Account({ session }: { session: Session }) {
     } | null>(null),
     [factorName, setFactorName] = useState("Work phone"),
     [code, setCode] = useState("");
-  const [busy, setBusy] = useState(""),
-    [notice, setNotice] = useState<{
-      text: string;
-      kind: "success" | "error";
-    } | null>(null);
-  const noticeRef = useRef<HTMLDivElement>(null);
+  const [busy, setBusy] = useState("");
   const cooldown = useCooldown();
   const dirty = Boolean(
     (info &&
@@ -61,11 +57,10 @@ export default function Account({ session }: { session: Session }) {
     setLoadError("");
   }, []);
   useEffect(() => {
-    void reload().catch((e) => setLoadError((e as Error).message));
+    void reload().catch((e) => setLoadError(e as Error));
   }, [reload]);
   function notify(text: string, kind: "success" | "error") {
-    setNotice({ text, kind });
-    setTimeout(() => noticeRef.current?.focus(), 0);
+    appNotice(text, kind);
   }
   function failed(error: unknown) {
     cooldown.handle(error);
@@ -77,12 +72,10 @@ export default function Account({ session }: { session: Session }) {
         <h2>My account</h2>
         {loadError ? (
           <>
-            <p className="error" role="alert">
-              {loadError}
-            </p>
+            {null}
             <button
               onClick={() =>
-                void reload().catch((e) => setLoadError((e as Error).message))
+                void reload().catch((e) => setLoadError(e as Error))
               }
             >
               Try again
@@ -104,24 +97,6 @@ export default function Account({ session }: { session: Session }) {
           Authenticator protected · {session.role}
         </span>
       </section>
-      {notice && (
-        <div
-          ref={noticeRef}
-          tabIndex={-1}
-          className={`account-feedback ${notice.kind}`}
-          role={notice.kind === "error" ? "alert" : "status"}
-        >
-          <p>{notice.text}</p>
-          <button
-            type="button"
-            className="text-button"
-            aria-label="Dismiss notification"
-            onClick={() => setNotice(null)}
-          >
-            ×
-          </button>
-        </div>
-      )}
       {cooldown.seconds > 0 && (
         <p className="notice" role="status">
           Security requests are paused. Try again in {cooldown.seconds} seconds.

@@ -1,16 +1,17 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client";
 import { money } from "@/lib/contracts";
 import { businessDate, type Row } from "@/lib/business";
 export default function BusinessReports() {
   const [data, setData] = useState<Record<string, Row[]> | null>(null),
-    [error, setError] = useState(""),
+    [error, setError] = useFeedback("error"),
     [cutoff, setCutoff] = useState(businessDate());
   useEffect(() => {
     api<Record<string, Row[]>>("operations/reports?cutoff=" + cutoff)
       .then(setData)
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e));
   }, [cutoff]);
   return (
     <>
@@ -32,11 +33,7 @@ export default function BusinessReports() {
           your access. Reports show up to 1,000 detailed entries per section;
           use filtered archive exports for larger lists.
         </p>
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
+        {error && null}
       </section>
       {data &&
         (

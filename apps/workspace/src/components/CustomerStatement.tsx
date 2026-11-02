@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import { useState } from "react";
 import { api, saveFile } from "@/lib/client";
 import { businessDate } from "@/lib/business";
@@ -14,7 +15,7 @@ export default function CustomerStatement({
     [to, setTo] = useState(businessDate()),
     [recipient, setRecipient] = useState(email),
     [busy, setBusy] = useState(false),
-    [message, setMessage] = useState(""),
+    [message, setMessage] = useFeedback(),
     [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -22,7 +23,7 @@ export default function CustomerStatement({
     try {
       await action();
     } catch (e) {
-      setMessage((e as Error).message);
+      setMessage(e as Error);
     } finally {
       setBusy(false);
     }
@@ -108,11 +109,7 @@ export default function CustomerStatement({
           Email statement PDF
         </button>
       </div>
-      {message && (
-        <p role="status" className="notice">
-          {message}
-        </p>
-      )}
+      {message && null}
     </details>
   );
 }

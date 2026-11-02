@@ -1,5 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useFeedback, appNotice, dismissNotice } from "@/lib/notifications";
+import { backupFeedback, type BackupResult } from "@/lib/backup-feedback";
+import { useEffect, useState, useRef } from "react";
 import BusinessCalendar from "./BusinessCalendar";
 import BusinessPolicy from "./BusinessPolicy";
 import { api, saveFile } from "@/lib/client";
@@ -18,27 +20,29 @@ type Automation = {
 export default function BusinessAdministration() {
   const [settings, setSettings] = useState<Automation | null>(null),
     [health, setHealth] = useState<Record<string, unknown> | null>(null),
-    [message, setMessage] = useState(""),
-    [busy, setBusy] = useState(false);
-  const load = async () => {
+    [message, setMessage] = useFeedback(),
+    [busy, setBusy] = useState(false),
+    [backupBusy, setBackupBusy] = useState(false),
+    [backupResult, setBackupResult] = useState<ReturnType<
+      typeof backupFeedback
+    > | null>(null);
+  const backupLock = useRef(false),
+    lastBackupNotice = useRef<string | undefined>(undefined);
+  const load = async (notifications = true) => {
     const r = await api<{
       automation: Automation;
       health: Record<string, unknown>;
-    }>("business/health");
+    }>("business/health", undefined, { notifications });
     setSettings(r.automation);
     setHealth(r.health);
   };
   useEffect(() => {
-    load().catch((e) => setMessage(e.message));
+    load().catch((e) => setMessage(e));
   }, []);
   return (
     <section className="panel">
       <h2>Business operations settings</h2>
-      {message && (
-        <p className="notice" role="status">
-          {message}
-        </p>
-      )}
+      {message && null}
       {health && (
         <dl className="record-summary">
           {Object.entries(health).map(([k, v]) => (
@@ -69,7 +73,7 @@ export default function BusinessAdministration() {
                 "Automation settings saved. Enabled reminders are checked daily against current records.",
               );
             } catch (e) {
-              setMessage((e as Error).message);
+              setMessage(e as Error);
             } finally {
               setBusy(false);
             }
@@ -164,28 +168,70 @@ export default function BusinessAdministration() {
         </p>
         <div className="actions">
           <button
-            disabled={busy}
+            disabled={busy || backupBusy}
+            aria-busy={backupBusy}
             onClick={async () => {
-              setBusy(true);
+              if (backupLock.current) return;
+              backupLock.current = true;
+              setBackupBusy(true);
+              setBackupResult(null);
+              if (lastBackupNotice.current)
+                dismissNotice(lastBackupNotice.current);
+              const noticeId = crypto.randomUUID();
+              lastBackupNotice.current = noticeId;
+              appNotice(
+                "Creating and verifying the encrypted primary backup. You can keep working while it runs.",
+                "loading",
+                { id: noticeId, title: "Creating backup" },
+              );
               try {
-                const r = await api<{ configured: boolean }>(
+                const result = await api<BackupResult>(
                   "business/backup-run",
                   { confirmed: true },
+                  { notifications: false },
                 );
-                setMessage(
-                  r.configured
-                    ? "Backup check completed. Review the latest primary copy and Drive status in Operations health."
-                    : "Backup encryption is not configured. Complete the company backup setup before relying on scheduled copies.",
-                );
-                await load();
-              } catch (e) {
-                setMessage((e as Error).message);
+                const feedback = backupFeedback(result);
+                setBackupResult(feedback);
+                appNotice(feedback.message, feedback.tone, {
+                  id: noticeId,
+                  title: feedback.title,
+                });
+                try {
+                  await load(false);
+                } catch {
+                  appNotice(
+                    "The backup result was received, but the health panel could not refresh. Reload Operations settings to review its latest status.",
+                    "error",
+                    { title: "Health panel needs refresh" },
+                  );
+                }
+              } catch (error) {
+                const feedback = {
+                  tone: "error" as const,
+                  title: "Backup result could not be confirmed",
+                  message:
+                    (error as Error).message +
+                    " Check the latest backup status before retrying.",
+                };
+                setBackupResult(feedback);
+                appNotice(feedback.message, "error", {
+                  id: noticeId,
+                  title: feedback.title,
+                });
               } finally {
-                setBusy(false);
+                backupLock.current = false;
+                setBackupBusy(false);
               }
             }}
           >
-            Run backup now
+            {backupBusy ? (
+              <>
+                <span className="app-spinner" aria-hidden="true" /> Creating
+                backup…
+              </>
+            ) : (
+              "Run backup now"
+            )}
           </button>
           <button
             className="secondary"
@@ -196,7 +242,7 @@ export default function BusinessAdministration() {
                   confirmed: true,
                 });
               } catch (e) {
-                setMessage((e as Error).message);
+                setMessage(e as Error);
               }
             }}
           >
@@ -211,7 +257,7 @@ export default function BusinessAdministration() {
                   confirmed: true,
                 });
               } catch (e) {
-                setMessage((e as Error).message);
+                setMessage(e as Error);
               }
             }}
           >
@@ -225,6 +271,15 @@ export default function BusinessAdministration() {
             Company backup folder ↗
           </a>
         </div>
+        {backupResult && (
+          <div
+            className={backupResult.tone === "error" ? "error" : "notice"}
+            data-backup-result
+          >
+            <strong>{backupResult.title}</strong>
+            <p>{backupResult.message}</p>
+          </div>
+        )}
         <p>
           Finance includes the company ledger and accountant CSV exports. The
           owner reviews opening balances and reconciliation while handling the

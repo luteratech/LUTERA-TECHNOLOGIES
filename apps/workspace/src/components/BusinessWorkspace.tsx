@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import StatusBadge from "./StatusBadge";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, saveFile } from "@/lib/client";
@@ -170,7 +171,7 @@ const resources: Resource[] = [
 ];
 export function BusinessDashboard({ onOpen }: { onOpen?: () => void }) {
   const [data, setData] = useState<Record<string, unknown> | null>(null),
-    [error, setError] = useState(""),
+    [error, setError] = useFeedback("error"),
     [from, setFrom] = useState(""),
     [to, setTo] = useState(""),
     [owner, setOwner] = useState(""),
@@ -200,7 +201,7 @@ export function BusinessDashboard({ onOpen }: { onOpen?: () => void }) {
         }
       })
       .catch((e) => {
-        if (active) setError(e.message);
+        if (active) setError(e);
       });
     return () => {
       active = false;
@@ -262,11 +263,7 @@ export function BusinessDashboard({ onOpen }: { onOpen?: () => void }) {
           />
         </label>
       </div>
-      {error && (
-        <p role="alert" className="error">
-          {error}
-        </p>
-      )}
+      {error && null}
       {data ? (
         <>
           <div className="stat-grid">
@@ -355,7 +352,7 @@ export function EntryForm({
       initialValues(fields, initial, config.me),
     ),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
+    [error, setError] = useFeedback("error"),
     [dirty, setDirty] = useState(false);
   useUnsavedChanges(dirty);
   return (
@@ -364,8 +361,8 @@ export function EntryForm({
         <h2>{title}</h2>
         <button
           className="secondary"
-          onClick={() => {
-            if (mayLeave()) onBack();
+          onClick={async () => {
+            if (await mayLeave()) onBack();
           }}
         >
           Back
@@ -380,7 +377,7 @@ export function EntryForm({
             await submit(payloadValues(fields, values), requestKey);
             setDirty(false);
           } catch (err) {
-            setError((err as Error).message);
+            setError(err as Error);
           } finally {
             setBusy(false);
           }
@@ -396,11 +393,7 @@ export function EntryForm({
             setDirty(true);
           }}
         />
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
+        {error && null}
         <div className="actions">
           <button disabled={busy}>{busy ? "Saving…" : button}</button>
         </div>
@@ -432,8 +425,8 @@ export default function BusinessWorkspace({
     [page, setPage] = useState(0),
     [more, setMore] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [notice, setNotice] = useState(""),
+    [error, setError] = useFeedback("error"),
+    [notice, setNotice] = useFeedback(),
     [action, setAction] = useState<{
       title: string;
       fields: FieldDef[];
@@ -464,7 +457,7 @@ export default function BusinessWorkspace({
       setMore(r.more);
       setError("");
     } catch (e) {
-      setError((e as Error).message);
+      setError(e as Error);
     } finally {
       setBusy(false);
     }
@@ -484,7 +477,7 @@ export default function BusinessWorkspace({
         }
       })
       .catch((e) => {
-        if (active) setError(e.message);
+        if (active) setError(e);
       });
     return () => {
       active = false;
@@ -519,7 +512,7 @@ export default function BusinessWorkspace({
           if (active) setSelected(r.record);
         })
         .catch((e) => {
-          if (active) setError(e.message);
+          if (active) setError(e);
         })
         .finally(() => {
           if (active) setRestored(true);
@@ -544,8 +537,8 @@ export default function BusinessWorkspace({
     );
     locationReady.current = true;
   }, [resource, selected, config, restored]);
-  const move = (r: Resource) => {
-    if (!mayLeave()) return;
+  const move = async (r: Resource) => {
+    if (!(await mayLeave())) return;
     setResource(r);
     setSelected(undefined);
     setAction(null);
@@ -771,11 +764,7 @@ export default function BusinessWorkspace({
             Back to list
           </button>
         </div>
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
+        {error && null}
         <Summary row={selected} />
         <div className="actions ops-gap">
           {resource.entity === "offers" &&
@@ -925,7 +914,7 @@ export default function BusinessWorkspace({
                       });
                       await done();
                     } catch (e) {
-                      setError((e as Error).message);
+                      setError(e as Error);
                     }
                   }}
                 >
@@ -989,7 +978,7 @@ export default function BusinessWorkspace({
                   });
                   await done();
                 } catch (e) {
-                  setError((e as Error).message);
+                  setError(e as Error);
                 }
               }}
             >
@@ -1048,7 +1037,7 @@ export default function BusinessWorkspace({
                         );
                         setQuotationId(r.document_id);
                       } catch (e) {
-                        setError((e as Error).message);
+                        setError(e as Error);
                       }
                     }}
                   >
@@ -1442,16 +1431,8 @@ export default function BusinessWorkspace({
             </button>
           </div>
         </div>
-        {notice && (
-          <p className="notice" role="status">
-            {notice}
-          </p>
-        )}
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
+        {notice && null}
+        {error && null}
         <div className="toolbar ops-gap">
           <label className="field">
             <span>Search {resource.label.toLowerCase()}</span>
@@ -1482,7 +1463,7 @@ export default function BusinessWorkspace({
                   to: filterTo,
                 });
               } catch (e) {
-                setError((e as Error).message);
+                setError(e as Error);
               }
             }}
           >
@@ -1724,7 +1705,7 @@ function Related({
   ) => void;
   onOpenDocument: (id?: string) => void;
 }) {
-  const [message, setMessage] = useState(""),
+  const [message, setMessage] = useFeedback(),
     [notes, setNotes] = useState<Row[]>([]),
     [related, setRelated] = useState<{ entity: string; rows: Row[] }[]>([]);
   useEffect(() => {
@@ -1733,7 +1714,7 @@ function Related({
       "business/related?entity=" + resource.entity + "&id=" + record.id,
     )
       .then(setRelated)
-      .catch((e) => setMessage(e.message));
+      .catch((e) => setMessage(e));
   }, [record.id, resource.entity]);
   useEffect(() => {
     if (resource.entity !== "customers") return;
@@ -1808,7 +1789,7 @@ function Related({
           </ul>
         </details>
       ))}
-      {message && <p role="status">{message}</p>}
+
       <div className="actions">
         {["customers", "cases", "enquiries"].includes(resource.entity) && (
           <button
@@ -1844,7 +1825,7 @@ function Related({
                   );
                   onOpenDocument(r.document_id);
                 } catch (e) {
-                  setMessage((e as Error).message);
+                  setMessage(e as Error);
                 }
               }}
             >
@@ -1861,7 +1842,7 @@ function Related({
                     currency: "NGN",
                   });
                 } catch (e) {
-                  setMessage((e as Error).message);
+                  setMessage(e as Error);
                 }
               }}
             >
@@ -1888,16 +1869,16 @@ function Related({
 }
 function StockBalances() {
   const [rows, setRows] = useState<Row[]>([]),
-    [error, setError] = useState("");
+    [error, setError] = useFeedback("error");
   useEffect(() => {
     api<Row[]>("business/stock-balances")
       .then(setRows)
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e));
   }, []);
   return (
     <section className="panel">
       <h3>Stock availability</h3>
-      {error && <p role="alert">{error}</p>}
+
       <div className="table-scroll">
         <table>
           <thead>
@@ -1935,7 +1916,7 @@ function StockBalances() {
 function BankImport({ onSaved }: { onSaved: () => void }) {
   const [text, setText] = useState(""),
     [preview, setPreview] = useState<unknown[]>([]),
-    [message, setMessage] = useState("");
+    [message, setMessage] = useFeedback();
   return (
     <section className="panel">
       <h3>Import bank statement CSV</h3>
@@ -1968,7 +1949,7 @@ function BankImport({ onSaved }: { onSaved: () => void }) {
                 `${r.rows.length} rows validated. Review before importing.`,
               );
             } catch (e) {
-              setMessage((e as Error).message);
+              setMessage(e as Error);
             }
           }}
         >
@@ -1986,14 +1967,14 @@ function BankImport({ onSaved }: { onSaved: () => void }) {
               setPreview([]);
               onSaved();
             } catch (e) {
-              setMessage((e as Error).message);
+              setMessage(e as Error);
             }
           }}
         >
           Import validated rows
         </button>
       </div>
-      {message && <p role="status">{message}</p>}
+
       {preview.length > 0 && (
         <pre className="import-preview">{JSON.stringify(preview, null, 2)}</pre>
       )}

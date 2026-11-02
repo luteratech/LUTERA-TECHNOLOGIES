@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import { useEffect, useState } from "react";
 import UserResponsibilities from "./UserResponsibilities";
 import { api } from "@/lib/client";
@@ -12,8 +13,8 @@ export default function BusinessAccess({
 }) {
   const [editing, setEditing] = useState(false),
     [rows, setRows] = useState<Row[]>([]),
-    [error, setError] = useState(""),
-    [message, setMessage] = useState("");
+    [error, setError] = useFeedback("error"),
+    [message, setMessage] = useFeedback();
   const load = () =>
     api<{ rows: Row[] }>("business/list", {
       entity: "grants",
@@ -23,7 +24,7 @@ export default function BusinessAccess({
       status: "",
     })
       .then((r) => setRows(r.rows))
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e));
   useEffect(() => {
     if (config?.owner) void load();
   }, [config?.owner]);
@@ -55,16 +56,8 @@ export default function BusinessAccess({
           </div>
           <button onClick={() => setEditing(true)}>Configure access</button>
         </div>
-        {error && (
-          <p role="alert" className="error">
-            {error}
-          </p>
-        )}
-        {message && (
-          <p role="status" className="notice">
-            {message}
-          </p>
-        )}
+        {error && null}
+        {message && null}
         {rows.length ? (
           <div className="table-scroll">
             <table>

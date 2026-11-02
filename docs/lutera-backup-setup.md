@@ -4,8 +4,9 @@ Use **luteratech2@gmail.com** throughout. The private company backup folder is:
 https://drive.google.com/drive/folders/1M5R-up413YeEzlRudOPObu2f258gkktD
 
 The encrypted 23 October snapshot has been copied to this folder and its
-SHA-256 verified after download. This historical file is not evidence of a
-fresh daily backup. Supabase remains the primary encrypted backup location.
+SHA-256 verified after download. A new manual primary backup succeeded on
+**2 November 2026 at 15:20 UTC** in Supabase; its Drive copy is still pending.
+This does not verify unattended daily execution. Supabase remains primary.
 
 1. In the private Lutera workspace, open **Operations settings**. Choose
    **Run backup now** and review the result and latest primary backup date.

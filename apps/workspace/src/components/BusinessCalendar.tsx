@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client";
 type Calendar = {
@@ -16,12 +17,12 @@ const minutes = (value: string) =>
   Number(value.slice(0, 2)) * 60 + Number(value.slice(3));
 export default function BusinessCalendar() {
   const [value, setValue] = useState<Calendar | null>(null),
-    [message, setMessage] = useState(""),
+    [message, setMessage] = useFeedback(),
     [busy, setBusy] = useState(false);
   useEffect(() => {
     api<Calendar>("business/delivery-calendar")
       .then(setValue)
-      .catch((e) => setMessage(e.message));
+      .catch((e) => setMessage(e));
   }, []);
   return (
     <details className="ops-gap">
@@ -31,7 +32,7 @@ export default function BusinessCalendar() {
         agreed first-response targets; it does not create a support promise by
         itself. Existing deadlines remain recorded when the calendar changes.
       </p>
-      {message && <p role="status">{message}</p>}
+
       {value && (
         <form
           onSubmit={async (e) => {
@@ -54,7 +55,7 @@ export default function BusinessCalendar() {
               );
               setMessage("Business calendar saved.");
             } catch (e) {
-              setMessage((e as Error).message);
+              setMessage(e as Error);
             } finally {
               setBusy(false);
             }

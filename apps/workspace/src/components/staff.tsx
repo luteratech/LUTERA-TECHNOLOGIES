@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import { useEffect, useState } from "react";
 import {
   staffSchema,
@@ -8,7 +9,7 @@ import {
 } from "@/lib/contracts";
 import { api, Field, Notice, saveFile } from "./Workspace";
 import { ConfirmDialog } from "./documents";
-import { useUnsavedChanges } from "@/lib/unsaved";
+import { mayLeave, useUnsavedChanges } from "@/lib/unsaved";
 import { useRecords, Pagination } from "./records";
 export default function StaffCards({
   records,
@@ -138,7 +139,7 @@ function Editor({
     },
   );
   const [busy, setBusy] = useState(false),
-    [message, setMessage] = useState(""),
+    [message, setMessage] = useFeedback(),
     [dirty, setDirty] = useState(false),
     [template, setTemplate] = useState<"name" | "id">("name"),
     [side, setSide] = useState<"front" | "back">("front"),
@@ -170,7 +171,7 @@ function Editor({
       });
       update("photo_path", response.path);
     } catch (e) {
-      setMessage((e as Error).message);
+      setMessage(e as Error);
     } finally {
       setBusy(false);
     }
@@ -188,7 +189,7 @@ function Editor({
       await onSaved(next);
       setMessage("Staff profile saved.");
     } catch (e) {
-      setMessage((e as Error).message);
+      setMessage(e as Error);
     } finally {
       setBusy(false);
     }
@@ -207,7 +208,7 @@ function Editor({
         bleed: format === "pdf" && bleed,
       });
     } catch (e) {
-      setMessage((e as Error).message);
+      setMessage(e as Error);
     } finally {
       setBusy(false);
     }
@@ -221,7 +222,7 @@ function Editor({
       setConfirm(false);
       await onDeleted();
     } catch (e) {
-      setMessage((e as Error).message);
+      setMessage(e as Error);
     } finally {
       setBusy(false);
     }
@@ -230,8 +231,8 @@ function Editor({
     <>
       <button
         className="text-button back"
-        onClick={() => {
-          if (!dirty || window.confirm("Discard unsaved changes?")) onBack();
+        onClick={async () => {
+          if (await mayLeave()) onBack();
         }}
       >
         ← All staff profiles
@@ -329,7 +330,6 @@ function Editor({
               </button>
             )}
           </div>
-          {message && <Notice>{message}</Notice>}
         </form>
         <section className="panel card-tools">
           <h3>Card preview</h3>
@@ -478,7 +478,6 @@ function Editor({
             The profile will be removed. Its deletion remains in the activity
             history.
           </p>
-          {message && <p className="error">{message}</p>}
         </ConfirmDialog>
       )}
     </>

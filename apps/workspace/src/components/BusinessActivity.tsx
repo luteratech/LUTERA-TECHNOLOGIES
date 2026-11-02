@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client";
 import type { Row } from "@/lib/business";
@@ -7,7 +8,7 @@ export default function BusinessActivity() {
     [query, setQuery] = useState(""),
     [page, setPage] = useState(0),
     [more, setMore] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useFeedback("error");
   useEffect(() => {
     let active = true;
     const t = setTimeout(() => {
@@ -22,7 +23,7 @@ export default function BusinessActivity() {
           }
         })
         .catch((e) => {
-          if (active) setError(e.message);
+          if (active) setError(e);
         });
     }, 200);
     return () => {
@@ -45,11 +46,7 @@ export default function BusinessActivity() {
           placeholder="For example: documents, payments, customers"
         />
       </label>
-      {error && (
-        <p role="alert" className="error">
-          {error}
-        </p>
-      )}
+      {error && null}
       <div className="table-scroll">
         <table>
           <thead>

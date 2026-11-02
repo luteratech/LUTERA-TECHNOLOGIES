@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import StatusBadge from "./StatusBadge";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -131,8 +132,8 @@ export default function Documents({
         settings={settings}
         kind={kind}
         records={records}
-        onBack={() => {
-          if (mayLeave()) setSelected(undefined);
+        onBack={async () => {
+          if (await mayLeave()) setSelected(undefined);
         }}
         onSaved={async (d) => {
           setSelected(d);
@@ -251,13 +252,17 @@ export default function Documents({
                 {shown.map((doc) => (
                   <tr key={doc.id}>
                     <td>
-                      <strong className="document-reference">{doc.number || "Unnumbered draft"}</strong>
+                      <strong className="document-reference">
+                        {doc.number || "Unnumbered draft"}
+                      </strong>
                       <small>
                         {doc.kind} · {doc.payload.date}
                       </small>
                     </td>
                     <td>{doc.payload.customer.name}</td>
-                    <td className="numeric">{money(doc.total_minor, doc.payload.currency)}</td>
+                    <td className="numeric">
+                      {money(doc.total_minor, doc.payload.currency)}
+                    </td>
                     <td>
                       <StatusBadge status={doc.status} />
                     </td>
@@ -319,7 +324,7 @@ export function Editor({
     ),
     [tax, setTax] = useState(String((record?.payload.tax_bps || 0) / 100));
   const [busy, setBusy] = useState(false),
-    [message, setMessage] = useState(""),
+    [message, setMessage] = useFeedback(),
     [confirm, setConfirm] = useState<"issue" | "void" | "delete" | null>(null),
     [dirty, setDirty] = useState(false);
   const [linkedSearch, setLinkedSearch] = useState(""),
@@ -344,7 +349,7 @@ export function Editor({
           if (alive) setLinkedMatches(result.rows);
         })
         .catch((error) => {
-          if (alive) setMessage(error.message);
+          if (alive) setMessage(error);
         });
     }, 250);
     return () => {
@@ -413,7 +418,7 @@ export function Editor({
       await onSaved(next);
       setMessage("Draft saved. Review it before issuing.");
     } catch (error) {
-      setMessage((error as Error).message);
+      setMessage(error as Error);
     } finally {
       setBusy(false);
     }
@@ -441,7 +446,7 @@ export function Editor({
           : "Document voided; the original record is retained.",
       );
     } catch (error) {
-      setMessage((error as Error).message);
+      setMessage(error as Error);
     } finally {
       setBusy(false);
     }
@@ -457,7 +462,7 @@ export function Editor({
         format,
       });
     } catch (error) {
-      setMessage((error as Error).message);
+      setMessage(error as Error);
     } finally {
       setBusy(false);
     }
@@ -466,8 +471,8 @@ export function Editor({
     <>
       <button
         className="text-button back"
-        onClick={() => {
-          if (!dirty || window.confirm("Discard unsaved changes?")) onBack();
+        onClick={async () => {
+          if (await mayLeave()) onBack();
         }}
       >
         ← All documents
@@ -479,9 +484,7 @@ export function Editor({
           </p>
           <h2>{record?.number || (record ? "Saved draft" : "New draft")}</h2>
         </div>
-        {record && (
-          <StatusBadge status={record.status} />
-        )}
+        {record && <StatusBadge status={record.status} />}
       </div>
       <form className="panel" onSubmit={save}>
         <fieldset disabled={locked || busy}>
@@ -792,7 +795,6 @@ export function Editor({
             Unsaved changes. Save before issuing or exporting.
           </p>
         )}
-        {message && <Notice>{message}</Notice>}
       </form>
       {record && (
         <section className="panel">
@@ -839,11 +841,7 @@ export function Editor({
                 ? "The original document and its number will remain in the records. Explain why it is being cancelled."
                 : "This unissued draft will be removed. The deletion remains in the activity history."}
           </p>
-          {message && (
-            <p className="error" role="alert">
-              {message}
-            </p>
-          )}
+          {message && null}
         </ConfirmDialog>
       )}
     </>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import NotificationCenter from "@/components/NotificationCenter";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Lutera | Private workspace",
@@ -15,7 +16,7 @@ export default function Layout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body><NotificationCenter/>{children}</body>
     </html>
   );
 }

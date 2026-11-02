@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback, confirmAction } from "@/lib/notifications";
 import { useEffect, useState } from "react";
 import { siteSchema, icons, photos, type SiteContent } from "@/lib/contracts";
 import { api, Field, Notice, type State } from "./Workspace";
@@ -18,7 +19,7 @@ export default function ContentEditor({
 }) {
   const [value, setValue] = useState(initial.content),
     [busy, setBusy] = useState(false),
-    [message, setMessage] = useState(""),
+    [message, setMessage] = useFeedback(),
     [dirty, setDirty] = useState(false),
     [section, setSection] = useState(() => {
       const requested =
@@ -66,7 +67,7 @@ export default function ContentEditor({
       await refresh();
       setMessage("Website draft saved. The live website has not changed.");
     } catch (error) {
-      setMessage((error as Error).message);
+      setMessage(error as Error);
     } finally {
       setBusy(false);
     }
@@ -82,7 +83,7 @@ export default function ContentEditor({
         "Build requested. Check publication status after Vercel finishes deploying.",
       );
     } catch (error) {
-      setMessage((error as Error).message);
+      setMessage(error as Error);
     } finally {
       setBusy(false);
     }
@@ -101,7 +102,7 @@ export default function ContentEditor({
           : "This version is not live yet. Check the public website’s Vercel build logs if it continues.",
       );
     } catch (e) {
-      setMessage((e as Error).message);
+      setMessage(e as Error);
     } finally {
       setBusy(false);
     }
@@ -173,8 +174,8 @@ export default function ContentEditor({
             key={name}
             type="button"
             className={section === name ? "" : "secondary"}
-            onClick={() => {
-              if (!mayLeave()) return;
+            onClick={async () => {
+              if (!(await mayLeave())) return;
               setSection(name);
               workspaceLocation({ editor: name });
             }}
@@ -475,11 +476,14 @@ export default function ContentEditor({
                       type="button"
                       className="secondary danger"
                       disabled={value.services.length === 1}
-                      onClick={() => {
+                      onClick={async () => {
                         if (
-                          window.confirm(
-                            `Remove ${service.title} from the draft?`,
-                          )
+                          await confirmAction({
+                            title: "Remove this service?",
+                            message: `Remove ${service.title} from the website draft? Publish the draft to update the live website.`,
+                            confirmLabel: "Remove service",
+                            danger: true,
+                          })
                         )
                           update({
                             ...value,
@@ -680,7 +684,6 @@ export default function ContentEditor({
             </button>
             {dirty && <span className="muted">Unsaved changes</span>}
           </div>
-          {message && <Notice>{message}</Notice>}
         </form>
       )}
       <section className="panel">
@@ -722,7 +725,6 @@ export default function ContentEditor({
             new Vercel build. Only public company, service and contact
             information belongs in this draft.
           </p>
-          {message && <p className="error">{message}</p>}
         </ConfirmDialog>
       )}
     </>

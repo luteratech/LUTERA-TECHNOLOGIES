@@ -1,11 +1,12 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import { useState } from "react";
 import { api } from "@/lib/client";
 type Preview = { row: number; name: string; email: string; duplicate: boolean };
 export default function CustomerImport({ onSaved }: { onSaved: () => void }) {
   const [csv, setCSV] = useState(""),
     [rows, setRows] = useState<Preview[]>([]),
-    [message, setMessage] = useState(""),
+    [message, setMessage] = useFeedback(),
     [busy, setBusy] = useState(false),
     [key, setKey] = useState(() => crypto.randomUUID());
   return (
@@ -40,7 +41,7 @@ export default function CustomerImport({ onSaved }: { onSaved: () => void }) {
               setRows(r.rows);
               setMessage("Preview ready. Check names and duplicate warnings.");
             } catch (e) {
-              setMessage((e as Error).message);
+              setMessage(e as Error);
             } finally {
               setBusy(false);
             }
@@ -63,7 +64,7 @@ export default function CustomerImport({ onSaved }: { onSaved: () => void }) {
               setKey(crypto.randomUUID());
               onSaved();
             } catch (e) {
-              setMessage((e as Error).message);
+              setMessage(e as Error);
             } finally {
               setBusy(false);
             }
@@ -72,7 +73,7 @@ export default function CustomerImport({ onSaved }: { onSaved: () => void }) {
           Import reviewed records
         </button>
       </div>
-      {message && <p role="status">{message}</p>}
+
       {rows.length > 0 && (
         <div className="table-scroll">
           <table>

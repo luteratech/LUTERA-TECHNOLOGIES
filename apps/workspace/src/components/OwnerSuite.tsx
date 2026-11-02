@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback, confirmAction, requestReason } from "@/lib/notifications";
 import {
   useCallback,
   useEffect,
@@ -50,13 +51,13 @@ export default function OwnerSuite({
   view: "setup" | "accounting" | "signature" | "approvals";
 }) {
   const [config, setConfig] = useState<SuiteConfig | null>(null),
-    [error, setError] = useState("");
+    [error, setError] = useFeedback("error");
   const load = useCallback(async () => {
     try {
       setConfig(await api<SuiteConfig>("suite/config"));
       setError("");
     } catch (e) {
-      setError((e as Error).message);
+      setError(e as Error);
     }
   }, []);
   useEffect(() => {
@@ -75,11 +76,7 @@ export default function OwnerSuite({
     );
   return (
     <>
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
+      {error && null}
       {view === "setup" ? (
         <OwnerSettings config={config} refresh={load} />
       ) : view === "accounting" ? (
@@ -104,8 +101,8 @@ function OwnerSettings({
     ),
     [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
-    [message, setMessage] = useState(""),
-    [error, setError] = useState("");
+    [message, setMessage] = useFeedback(),
+    [error, setError] = useFeedback("error");
   useUnsavedChanges(dirty);
   if (!config.owner)
     return (
@@ -148,7 +145,7 @@ function OwnerSettings({
           );
           await refresh();
         } catch (e) {
-          setError((e as Error).message);
+          setError(e as Error);
         } finally {
           setBusy(false);
         }
@@ -349,16 +346,8 @@ function OwnerSettings({
           permissions.
         </p>
       </section>
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
-      {message && (
-        <p className="notice" role="status">
-          {message}
-        </p>
-      )}
+      {error && null}
+      {message && null}
       <button disabled={busy}>
         {busy ? "Saving…" : "Save owner settings"}
       </button>
@@ -377,8 +366,8 @@ function SignatureProfile({
     [image, setImage] = useState(config.profile?.image_data || ""),
     [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
-    [message, setMessage] = useState(""),
-    [error, setError] = useState("");
+    [message, setMessage] = useFeedback(),
+    [error, setError] = useFeedback("error");
   useUnsavedChanges(dirty);
   return (
     <section className="panel">
@@ -403,7 +392,7 @@ function SignatureProfile({
             setMessage("Your signature profile has been saved.");
             await refresh();
           } catch (e) {
-            setError((e as Error).message);
+            setError(e as Error);
           } finally {
             setBusy(false);
           }
@@ -465,16 +454,8 @@ function SignatureProfile({
           signing requires a separate signing certificate/provider; a signature
           image does not create that certificate.
         </p>
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
-        {message && (
-          <p className="notice" role="status">
-            {message}
-          </p>
-        )}
+        {error && null}
+        {message && null}
         <button disabled={busy || !image}>
           {busy ? "Saving…" : "Save personal signature"}
         </button>
@@ -495,15 +476,15 @@ function Approvals({ config }: { config: SuiteConfig }) {
     [reason, setReason] = useState(""),
     [consent, setConsent] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [message, setMessage] = useState("");
+    [error, setError] = useFeedback("error"),
+    [message, setMessage] = useFeedback();
   useEffect(() => {
     ++requestSerial.current;
     setSelected("");
     setSignatures([]);
     api<{ rows: Record<string, unknown>[] }>(`suite/documents?table=${table}`)
       .then((r) => setRows(r.rows))
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e));
   }, [table]);
   const row = rows.find((r) => r.id === selected);
   const load = async (id: string) => {
@@ -527,7 +508,7 @@ function Approvals({ config }: { config: SuiteConfig }) {
       setSignatures(approvals);
       setError("");
     } catch (e) {
-      setError((e as Error).message);
+      setError(e as Error);
     }
   };
   return (
@@ -697,7 +678,7 @@ function Approvals({ config }: { config: SuiteConfig }) {
                             },
                       );
                     } catch (e) {
-                      setError((e as Error).message);
+                      setError(e as Error);
                     }
                   }}
                 >
@@ -732,7 +713,7 @@ function Approvals({ config }: { config: SuiteConfig }) {
                 } catch (e) {
                   setCode("");
                   cooldown.handle(e);
-                  setError((e as Error).message);
+                  setError(e as Error);
                 } finally {
                   setBusy(false);
                 }
@@ -815,16 +796,8 @@ function Approvals({ config }: { config: SuiteConfig }) {
           a document through its normal workflow first.
         </p>
       )}
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
-      {message && (
-        <p className="notice" role="status">
-          {message}
-        </p>
-      )}
+      {error && null}
+      {message && null}
     </section>
   );
 }
@@ -841,8 +814,8 @@ function Accounting({
     [more, setMore] = useState(false),
     [editing, setEditing] = useState<LedgerJournal | null | undefined>(),
     [tab, setTab] = useState("journals"),
-    [error, setError] = useState(""),
-    [message, setMessage] = useState("");
+    [error, setError] = useFeedback("error"),
+    [message, setMessage] = useFeedback();
   const load = useCallback(async () => {
     if (!config.read) return;
     try {
@@ -857,7 +830,7 @@ function Accounting({
       setMore(j.more);
       setError("");
     } catch (e) {
-      setError((e as Error).message);
+      setError(e as Error);
     }
   }, [page, config.read]);
   useEffect(() => {
@@ -881,8 +854,8 @@ function Accounting({
       <JournalEditor
         accounts={accounts}
         record={editing}
-        onBack={() => {
-          if (mayLeave()) setEditing(undefined);
+        onBack={async () => {
+          if (await mayLeave()) setEditing(undefined);
         }}
         onSaved={done}
       />
@@ -907,8 +880,8 @@ function Accounting({
               <button
                 key={t}
                 className={tab === t ? "" : "secondary"}
-                onClick={() => {
-                  if (mayLeave()) setTab(t);
+                onClick={async () => {
+                  if (await mayLeave()) setTab(t);
                 }}
               >
                 {
@@ -927,16 +900,8 @@ function Accounting({
           )}
         </div>
       </div>
-      {message && (
-        <p className="notice" role="status">
-          {message}
-        </p>
-      )}
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
+      {message && null}
+      {error && null}
       {tab === "journals" && (
         <section className="panel">
           <div className="toolbar">
@@ -1000,7 +965,7 @@ function Accounting({
                         });
                         await done();
                       } catch (e) {
-                        setError((e as Error).message);
+                        setError(e as Error);
                       }
                     }}
                   >
@@ -1011,7 +976,15 @@ function Accounting({
                   <button
                     className="secondary"
                     onClick={async () => {
-                      if (!confirm("Delete this unposted journal draft?"))
+                      if (
+                        !(await confirmAction({
+                          title: "Delete this journal draft?",
+                          message:
+                            "This unposted draft will be removed. Its deletion remains in the activity history.",
+                          confirmLabel: "Delete draft",
+                          danger: true,
+                        }))
+                      )
                         return;
                       try {
                         await api("suite/journal-delete", {
@@ -1020,7 +993,7 @@ function Accounting({
                         });
                         await done();
                       } catch (e) {
-                        setError((e as Error).message);
+                        setError(e as Error);
                       }
                     }}
                   >
@@ -1031,9 +1004,12 @@ function Accounting({
                   <button
                     className="secondary"
                     onClick={async () => {
-                      const reason = prompt(
-                        "Reason for a correcting reversal (at least five characters):",
-                      );
+                      const reason = await requestReason({
+                        title: "Create a correcting reversal?",
+                        message:
+                          "Enter a reason of at least five characters. The original posted journal will be retained in the audit trail.",
+                        confirmLabel: "Create reversal",
+                      });
                       if (!reason) return;
                       try {
                         await api("suite/journal-reverse", {
@@ -1045,7 +1021,7 @@ function Accounting({
                         });
                         await done();
                       } catch (e) {
-                        setError((e as Error).message);
+                        setError(e as Error);
                       }
                     }}
                   >
@@ -1117,7 +1093,7 @@ function JournalEditor({
     [key] = useState(() => crypto.randomUUID()),
     [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useFeedback("error");
   useUnsavedChanges(dirty);
   const edit = (i: number, k: string, value: string) => {
     setLines((old) => old.map((l, j) => (j === i ? { ...l, [k]: value } : l)));
@@ -1156,7 +1132,7 @@ function JournalEditor({
             setDirty(false);
             await onSaved();
           } catch (e) {
-            setError((e as Error).message);
+            setError(e as Error);
           } finally {
             setBusy(false);
           }
@@ -1268,11 +1244,7 @@ function JournalEditor({
           A draft may be saved for review. Posting requires a positive debit or
           credit on every line and equal total debits and credits.
         </p>
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
+        {error && null}
         <div className="actions">
           <button
             type="button"
@@ -1305,7 +1277,7 @@ function Accounts({
   owner: boolean;
   refresh: () => Promise<void>;
 }) {
-  const [error, setError] = useState("");
+  const [error, setError] = useFeedback("error");
   return (
     <section className="panel">
       <h3>Chart of accounts</h3>
@@ -1349,7 +1321,7 @@ function Accounts({
               setError("");
               await refresh();
             } catch (e) {
-              setError((e as Error).message);
+              setError(e as Error);
             }
           }}
         >
@@ -1382,11 +1354,7 @@ function Accounts({
           <button>Add account</button>
         </form>
       )}
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
+      {error && null}
     </section>
   );
 }
@@ -1403,13 +1371,13 @@ function SourceImport({
     [rows, setRows] = useState<Record<string, unknown>[]>([]),
     [selected, setSelected] = useState(""),
     [account, setAccount] = useState("6000"),
-    [error, setError] = useState(""),
+    [error, setError] = useFeedback("error"),
     [busy, setBusy] = useState(false);
   useEffect(() => {
     setSelected("");
     api<{ rows: Record<string, unknown>[] }>(`suite/sources?table=${table}`)
       .then((r) => setRows(r.rows))
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e));
   }, [table]);
   return (
     <section className="panel">
@@ -1434,7 +1402,7 @@ function SourceImport({
             setError("");
             await onSaved();
           } catch (e) {
-            setError((e as Error).message);
+            setError(e as Error);
           } finally {
             setBusy(false);
           }
@@ -1498,11 +1466,7 @@ function SourceImport({
             </Field>
           )}
         </div>
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
+        {error && null}
         <button disabled={!writable || busy || !selected}>
           {busy ? "Importing…" : "Prepare source journal"}
         </button>
@@ -1526,14 +1490,14 @@ function Reports({ config }: { config: SuiteConfig }) {
     [to, setTo] = useState(today()),
     [currency, setCurrency] = useState("NGN"),
     [report, setReport] = useState<LedgerReport | null>(null),
-    [error, setError] = useState("");
+    [error, setError] = useFeedback("error");
   const load = useCallback(async () => {
     try {
       if (from > to) throw Error("The start date must be before the end date.");
       setReport(await api<LedgerReport>(`suite/reports?from=${from}&to=${to}`));
       setError("");
     } catch (e) {
-      setError((e as Error).message);
+      setError(e as Error);
     }
   }, [from, to]);
   useEffect(() => {
@@ -1585,11 +1549,7 @@ function Reports({ config }: { config: SuiteConfig }) {
         trial-balance figures include all posted entries through the end date.
         Currencies are not consolidated or automatically translated.
       </p>
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
+      {error && null}
       {s && report && (
         <>
           <div className="notice">
@@ -1754,8 +1714,8 @@ function Periods({
   const [through, setThrough] = useState(today()),
     [reason, setReason] = useState(""),
     [reconciled, setReconciled] = useState(false),
-    [error, setError] = useState(""),
-    [message, setMessage] = useState("");
+    [error, setError] = useFeedback("error"),
+    [message, setMessage] = useFeedback();
   const act = async (action: string) => {
     try {
       await api("suite/" + action, { through, reason, reconciled });
@@ -1767,7 +1727,7 @@ function Periods({
       );
       await refresh();
     } catch (e) {
-      setError((e as Error).message);
+      setError(e as Error);
     }
   };
   return (
@@ -1821,16 +1781,8 @@ function Periods({
           </button>
         )}
       </div>
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
-      {message && (
-        <p className="notice" role="status">
-          {message}
-        </p>
-      )}
+      {error && null}
+      {message && null}
     </section>
   );
 }

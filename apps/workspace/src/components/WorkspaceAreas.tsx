@@ -62,7 +62,7 @@ export default function WorkspaceAreas({
   area: string;
   tools: WorkspaceTool[];
   config: WorkspaceAccess | null;
-  open: (target: Destination) => boolean | void;
+  open: (target: Destination) => boolean | void | Promise<boolean | void>;
   website?: { version: number; connected: boolean; status?: string };
 }) {
   const [query, setQuery] = useState("");

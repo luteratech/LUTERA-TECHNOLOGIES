@@ -1,8 +1,9 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client";
 import MultiSelect from "./MultiSelect";
-import { useUnsavedChanges } from "@/lib/unsaved";
+import { mayLeave, useUnsavedChanges } from "@/lib/unsaved";
 import type { SuiteConfig } from "@/lib/suite";
 export default function UserResponsibilities() {
   const [config, setConfig] = useState<SuiteConfig | null>(null),
@@ -14,13 +15,13 @@ export default function UserResponsibilities() {
     [sign, setSign] = useState(false),
     [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [message, setMessage] = useState("");
+    [error, setError] = useFeedback("error"),
+    [message, setMessage] = useFeedback();
   useUnsavedChanges(dirty);
   useEffect(() => {
     api<SuiteConfig>("suite/config")
       .then(setConfig)
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e));
   }, []);
   if (!config)
     return (
@@ -67,7 +68,7 @@ export default function UserResponsibilities() {
             setMessage("Responsibilities and authority saved.");
             setConfig(await api<SuiteConfig>("suite/config"));
           } catch (e) {
-            setError((e as Error).message);
+            setError(e as Error);
           } finally {
             setBusy(false);
           }
@@ -80,13 +81,10 @@ export default function UserResponsibilities() {
               aria-label="Approved colleague"
               required
               value={email}
-              onChange={(e) => {
-                if (
-                  dirty &&
-                  !confirm("Discard these unsaved responsibilities?")
-                )
-                  return;
-                choose(e.target.value);
+              onChange={async (e) => {
+                const selectedEmail = e.target.value;
+                if (!(await mayLeave())) return;
+                choose(selectedEmail);
               }}
             >
               <option value="">Choose an approved colleague…</option>
@@ -156,16 +154,8 @@ export default function UserResponsibilities() {
           Reopening a closed period remains owner-only. Staff accounts begin
           without website or finance access unless you grant it.
         </p>
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
-        {message && (
-          <p className="notice" role="status">
-            {message}
-          </p>
-        )}
+        {error && null}
+        {message && null}
         <button disabled={busy || !email}>
           {busy ? "Saving…" : "Save responsibilities"}
         </button>

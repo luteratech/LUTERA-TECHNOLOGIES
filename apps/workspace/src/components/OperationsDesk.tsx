@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/client";
 import {
@@ -328,8 +329,8 @@ export default function OperationsDesk({
     [key, setKey] = useState(""),
     [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
-    [feedback, setFeedback] = useState(""),
-    [error, setError] = useState("");
+    [feedback, setFeedback] = useFeedback(),
+    [error, setError] = useFeedback("error");
   const generation = useRef(0);
   const locationReady = useRef(false);
   useUnsavedChanges(dirty);
@@ -351,7 +352,7 @@ export default function OperationsDesk({
             modules[0],
         );
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e));
   }, []);
   const load = async () => {
     const current = ++generation.current;
@@ -375,10 +376,7 @@ export default function OperationsDesk({
   useEffect(() => {
     if (!config) return;
     generation.current++;
-    const timer = setTimeout(
-      () => void load().catch((e) => setError(e.message)),
-      200,
-    );
+    const timer = setTimeout(() => void load().catch((e) => setError(e)), 200);
     return () => {
       clearTimeout(timer);
       generation.current++;
@@ -390,12 +388,12 @@ export default function OperationsDesk({
       locationReady.current = true;
     }
   }, [config, module]);
-  const start = (
+  const start = async (
     action: string,
     fields: FieldDef[],
     record: Row | null = null,
   ) => {
-    if (!mayLeave()) return;
+    if (!(await mayLeave())) return;
     setSelected(record);
     setForm({ action, fields });
     setValues(initialValues(fields, record, config?.me));
@@ -438,9 +436,10 @@ export default function OperationsDesk({
           <select
             aria-labelledby="operational-area-label"
             value={module.entity}
-            onChange={(e) => {
-              if (!mayLeave()) return;
-              setModule(modules.find((m) => m.entity === e.target.value)!);
+            onChange={async (e) => {
+              const selectedArea = e.target.value;
+              if (!(await mayLeave())) return;
+              setModule(modules.find((m) => m.entity === selectedArea)!);
               setPage(0);
               setForm(null);
               setSelected(null);
@@ -515,16 +514,8 @@ export default function OperationsDesk({
           </>
         )}
 
-        {feedback && (
-          <p className="notice" role="status">
-            {feedback}
-          </p>
-        )}
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
+        {feedback && null}
+        {error && null}
         {module.action && write && !form && (
           <button onClick={() => start(module.action!, module.fields!)}>
             New record +
@@ -537,8 +528,8 @@ export default function OperationsDesk({
             <h2>{form.action.replaceAll("-", " ")}</h2>
             <button
               className="secondary"
-              onClick={() => {
-                if (mayLeave()) {
+              onClick={async () => {
+                if (await mayLeave()) {
                   setForm(null);
                   setDirty(false);
                 }
@@ -563,7 +554,7 @@ export default function OperationsDesk({
                       ),
                     );
                   } catch (e) {
-                    setError((e as Error).message);
+                    setError(e as Error);
                   }
                 }}
               >
@@ -604,7 +595,7 @@ export default function OperationsDesk({
                 );
                 await load();
               } catch (e) {
-                setError((e as Error).message);
+                setError(e as Error);
               } finally {
                 setBusy(false);
               }

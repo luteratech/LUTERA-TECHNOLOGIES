@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import { useEffect, useId, useState } from "react";
 import StatusBadge from "./StatusBadge";
 import { api } from "@/lib/client";
@@ -401,7 +402,7 @@ export function Reference({
 }) {
   const [query, setQuery] = useState(""),
     [rows, setRows] = useState<Row[]>([]),
-    [error, setError] = useState("");
+    [error, setError] = useFeedback("error");
   const id = useId();
   useEffect(() => {
     let active = true;
@@ -421,7 +422,7 @@ export function Reference({
           }
         })
         .catch((e) => {
-          if (active) setError(e.message);
+          if (active) setError(e);
         });
     }, 200);
     return () => {
@@ -468,7 +469,6 @@ export function Reference({
           </option>
         ))}
       </select>
-      {error && <small role="alert">{error}</small>}
     </div>
   );
 }
@@ -486,7 +486,7 @@ export function Evidence({
   required?: boolean;
 }) {
   const [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useFeedback("error");
   return (
     <div className="evidence-field">
       {value && (
@@ -522,7 +522,7 @@ export function Evidence({
             });
             onChange(result.id);
           } catch (err) {
-            setError((err as Error).message);
+            setError(err as Error);
           } finally {
             setBusy(false);
             e.target.value = "";
@@ -534,11 +534,7 @@ export function Evidence({
           ? "Uploading evidence…"
           : "PDF, JPEG, PNG or WebP, up to 1 MB. Evidence stays private."}
       </small>
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
+      {error && null}
     </div>
   );
 }

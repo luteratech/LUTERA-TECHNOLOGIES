@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client";
 import { useUnsavedChanges } from "@/lib/unsaved";
@@ -18,7 +19,7 @@ export default function BusinessPolicy() {
     [version, setVersion] = useState(0),
     [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
-    [message, setMessage] = useState(""),
+    [message, setMessage] = useFeedback(),
     [key, setKey] = useState("");
   useUnsavedChanges(dirty);
   useEffect(() => {
@@ -38,7 +39,7 @@ export default function BusinessPolicy() {
           setKey(crypto.randomUUID());
         }
       })
-      .catch((e) => setMessage(e.message));
+      .catch((e) => setMessage(e));
   }, []);
   return (
     <details className="ops-gap">
@@ -71,7 +72,7 @@ export default function BusinessPolicy() {
                 "Policy recorded. Approval is still required; automatic retention deletion is not enabled.",
               );
             } catch (e) {
-              setMessage((e as Error).message);
+              setMessage(e as Error);
             } finally {
               setBusy(false);
             }
@@ -110,11 +111,7 @@ export default function BusinessPolicy() {
           <button disabled={busy}>Save operating policy</button>
         </form>
       )}
-      {message && (
-        <p role="status" className="notice">
-          {message}
-        </p>
-      )}
+      {message && null}
     </details>
   );
 }

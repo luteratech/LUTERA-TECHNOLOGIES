@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import { useEffect, useState } from "react";
 import { api, saveFile } from "@/lib/client";
 import { minor, money } from "@/lib/contracts";
@@ -80,7 +81,7 @@ export default function CommercialEditor({
     [sourceLines, setSourceLines] = useState<Row[]>([]),
     [key, setKey] = useState(() => crypto.randomUUID()),
     [busy, setBusy] = useState(false),
-    [message, setMessage] = useState(""),
+    [message, setMessage] = useFeedback(),
     [dirty, setDirty] = useState(false),
     [reason, setReason] = useState("");
   const area = commercialArea(String(data.kind)),
@@ -106,7 +107,7 @@ export default function CommercialEditor({
           );
       })
       .catch((e) => {
-        if (active) setMessage(e.message);
+        if (active) setMessage(e);
       });
     return () => {
       active = false;
@@ -163,7 +164,7 @@ export default function CommercialEditor({
       );
       setDirty(true);
     } catch (e) {
-      setMessage((e as Error).message);
+      setMessage(e as Error);
     } finally {
       setBusy(false);
     }
@@ -226,7 +227,7 @@ export default function CommercialEditor({
           : "Document cancelled.",
       );
     } catch (e) {
-      setMessage((e as Error).message);
+      setMessage(e as Error);
     } finally {
       setBusy(false);
     }
@@ -245,18 +246,14 @@ export default function CommercialEditor({
         </div>
         <button
           className="secondary"
-          onClick={() => {
-            if (mayLeave()) onBack();
+          onClick={async () => {
+            if (await mayLeave()) onBack();
           }}
         >
           Back to list
         </button>
       </div>
-      {message && (
-        <p className="notice" role="status">
-          {message}
-        </p>
-      )}
+      {message && null}
       <form
         onSubmit={async (e) => {
           e.preventDefault();
@@ -265,7 +262,7 @@ export default function CommercialEditor({
           try {
             await save();
           } catch (err) {
-            setMessage((err as Error).message);
+            setMessage(err as Error);
           } finally {
             setBusy(false);
           }
@@ -372,7 +369,7 @@ export default function CommercialEditor({
                       })),
                     );
                   } catch (e) {
-                    setMessage((e as Error).message);
+                    setMessage(e as Error);
                   }
                 }}
               />
@@ -415,7 +412,7 @@ export default function CommercialEditor({
                       );
                       setDirty(true);
                     } catch (e) {
-                      setMessage((e as Error).message);
+                      setMessage(e as Error);
                     }
                   }}
                 />
@@ -570,7 +567,7 @@ export default function CommercialEditor({
                       format: f,
                     });
                   } catch (e) {
-                    setMessage((e as Error).message);
+                    setMessage(e as Error);
                   } finally {
                     setBusy(false);
                   }

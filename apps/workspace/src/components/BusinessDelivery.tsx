@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client";
 import type { Row, Area } from "@/lib/business";
@@ -48,7 +49,7 @@ export default function BusinessDelivery({
     [values, setValues] = useState<Record<string, unknown>>(() =>
       initialValues(serviceFields),
     ),
-    [message, setMessage] = useState(""),
+    [message, setMessage] = useFeedback(),
     [busy, setBusy] = useState(false),
     [dirty, setDirty] = useState(false),
     [change, setChange] = useState<Record<string, unknown> | null>(null),
@@ -94,7 +95,7 @@ export default function BusinessDelivery({
     setTemplate(!!r.template);
   };
   useEffect(() => {
-    load().catch((e) => setMessage(e.message));
+    load().catch((e) => setMessage(e));
   }, [record.id]);
   async function run(fn: () => Promise<void>) {
     setBusy(true);
@@ -107,7 +108,7 @@ export default function BusinessDelivery({
         "Delivery controls saved. Refresh the main record before editing its status.",
       );
     } catch (e) {
-      setMessage((e as Error).message);
+      setMessage(e as Error);
     } finally {
       setBusy(false);
     }
@@ -115,11 +116,7 @@ export default function BusinessDelivery({
   return (
     <section className="ops-gap">
       <h3>Delivery and service controls</h3>
-      {message && (
-        <p className="notice" role="status">
-          {message}
-        </p>
-      )}
+      {message && null}
       <p>
         Response targets apply only when explicitly agreed. Targets use Lutera’s
         configured business calendar in Africa/Lagos. Waiting status keeps the

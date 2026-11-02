@@ -109,8 +109,10 @@ encrypted application snapshot was copied from the earlier personal-account
 destination into this company folder, then downloaded and checked against its
 SHA-256 digest. The original copy and historical receipt were preserved.
 This is a verified historical copy, **not a fresh November snapshot**. The latest
-recorded primary snapshot at review was 23 October; the daily primary schedule
-must pass a fresh run before it can be relied on.
+recorded primary snapshot at the earlier review was 23 October. The owner
+subsequently ran a successful manual primary backup on **2 November at
+15:20 UTC**; its Drive receipt is pending. Unattended daily execution still
+requires a successful scheduled run.
 
 **One-time company Google authorization is still required for daily Drive
 copies.** The chat's Google connector cannot supply an unattended Vercel identity.

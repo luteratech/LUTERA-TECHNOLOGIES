@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import { useEffect, useState } from "react";
 import { api, saveFile } from "@/lib/client";
 import { money, type BusinessDocument } from "@/lib/contracts";
@@ -10,11 +11,11 @@ export default function BusinessReceiptViewer({
   onBack: () => void;
 }) {
   const [doc, setDoc] = useState<BusinessDocument | null>(null),
-    [error, setError] = useState("");
+    [error, setError] = useFeedback("error");
   useEffect(() => {
     api<BusinessDocument>("business/legacy-document?id=" + id)
       .then(setDoc)
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e));
   }, [id]);
   return (
     <section className="panel">
@@ -24,11 +25,7 @@ export default function BusinessReceiptViewer({
           Back
         </button>
       </div>
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
+      {error && null}
       {doc && (
         <>
           <p>{doc.payload.customer.name}</p>
@@ -56,7 +53,7 @@ export default function BusinessReceiptViewer({
                   try {
                     await saveFile("business/receipt-export", { id, format });
                   } catch (e) {
-                    setError((e as Error).message);
+                    setError(e as Error);
                   }
                 }}
               >

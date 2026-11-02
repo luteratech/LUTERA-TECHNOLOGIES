@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { mayLeave } from "./unsaved";
+import { mayLeave, hasUnsavedChanges } from "./unsaved";
 
 const eventName = "lutera-workspace-location";
 const storageKey = "lutera.workspace.navigation.v1";
@@ -92,7 +92,11 @@ export function useWorkspaceHistory(
     }
     let current = initialize();
     let last = maximum(current);
-    let restoring = false;
+    let restoring = false,
+      prompting = false,
+      disposed = false;
+    let approvedTarget: number | null = null;
+    let restored: (() => void) | null = null;
     const update = (direction?: Direction) => {
       current = initialize();
       last =
@@ -108,16 +112,35 @@ export function useWorkspaceHistory(
       if (restoring) {
         restoring = false;
         e.stopImmediatePropagation();
+        restored?.();
+        restored = null;
         return;
       }
       const target = marker();
       if (!target || target.trail !== current.trail) return;
-      if (!mayLeave()) {
+      if (approvedTarget !== target.index && hasUnsavedChanges()) {
         e.stopImmediatePropagation();
         restoring = true;
+        const backAtOriginal = new Promise<void>((resolve) => {
+          restored = resolve;
+        });
         history.go(current.index - target.index);
+        if (!prompting) {
+          prompting = true;
+          void (async () => {
+            await backAtOriginal;
+            if (disposed) return;
+            const discard = await mayLeave();
+            prompting = false;
+            if (discard && !disposed) {
+              approvedTarget = target.index;
+              history.go(target.index - current.index);
+            }
+          })();
+        }
         return;
       }
+      approvedTarget = null;
       // Keep the known forward boundary even when storage is unavailable.
       remember(target, last);
       notify("pop");
@@ -126,6 +149,8 @@ export function useWorkspaceHistory(
     window.addEventListener(eventName, changed);
     window.addEventListener("popstate", pop, true);
     return () => {
+      disposed = true;
+      restored?.();
       window.removeEventListener(eventName, changed);
       window.removeEventListener("popstate", pop, true);
     };

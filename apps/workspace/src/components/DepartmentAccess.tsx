@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import { useEffect, useState } from "react";
 import MultiSelect from "./MultiSelect";
 import { api } from "@/lib/client";
@@ -22,11 +23,11 @@ export default function DepartmentAccess({
     [scope, setScope] = useState("assigned"),
     [edit, setEdit] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useFeedback("error");
   useEffect(() => {
     api<SuiteConfig>("suite/config")
       .then((c) => setMembers(c.members.filter((m) => m.active)))
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e));
   }, []);
   return (
     <form
@@ -45,7 +46,7 @@ export default function DepartmentAccess({
           });
           await saved();
         } catch (e) {
-          setError((e as Error).message);
+          setError(e as Error);
         } finally {
           setBusy(false);
         }
@@ -113,11 +114,7 @@ export default function DepartmentAccess({
         selected departments. Other departments remain unchanged. Existing
         approval limits and document checks still apply.
       </p>
-      {error && (
-        <p role="alert" className="error">
-          {error}
-        </p>
-      )}
+      {error && null}
       <div className="actions">
         <button disabled={busy || !email || !selected.length}>
           {busy ? "Saving…" : "Save access rules"}

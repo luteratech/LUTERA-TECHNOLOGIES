@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback, confirmAction } from "@/lib/notifications";
 import StatusBadge from "./StatusBadge";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client";
@@ -36,7 +37,7 @@ export default function CustomerPortal() {
   const [token, setToken] = useState(""),
     [state, setState] = useState<State | null>(null),
     [email, setEmail] = useState(""),
-    [message, setMessage] = useState(""),
+    [message, setMessage] = useFeedback(),
     [busy, setBusy] = useState(false),
     [document, setDocument] = useState<Record<string, unknown> | null>(null),
     [selected, setSelected] = useState<Share | null>(null),
@@ -62,7 +63,7 @@ export default function CustomerPortal() {
     try {
       await fn();
     } catch (e) {
-      setMessage((e as Error).message);
+      setMessage(e as Error);
     } finally {
       setBusy(false);
     }
@@ -89,11 +90,7 @@ export default function CustomerPortal() {
         </a>
         <span>Customer portal</span>
       </header>
-      {message && (
-        <p className="notice" role="status">
-          {message}
-        </p>
-      )}
+      {message && null}
       {token ? (
         <section className="panel">
           <h1>Continue to your customer portal</h1>
@@ -337,11 +334,15 @@ export default function CustomerPortal() {
                   <button
                     className="secondary"
                     disabled={busy}
-                    onClick={() => {
+                    onClick={async () => {
                       if (
-                        window.confirm(
-                          "Decline this quotation revision? Lutera will receive your decision.",
-                        )
+                        await confirmAction({
+                          title: "Decline this quotation?",
+                          message:
+                            "Lutera will receive your decision about this quotation revision.",
+                          confirmLabel: "Decline quotation",
+                          danger: true,
+                        })
                       )
                         void run(async () => {
                           await api("portal/decline", {

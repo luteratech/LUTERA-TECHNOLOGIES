@@ -1,4 +1,5 @@
 "use client";
+import { useFeedback } from "@/lib/notifications";
 import { useEffect, useState } from "react";
 import { api, Notice } from "./Workspace";
 export function useRecords<T>({
@@ -24,7 +25,7 @@ export function useRecords<T>({
       more: initial.length > 50,
     }),
     [loading, setLoading] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useFeedback("error");
   useEffect(() => {
     if (!enabled) return;
     let alive = true;
@@ -42,7 +43,7 @@ export function useRecords<T>({
         });
         if (alive) setResult(next);
       } catch (e) {
-        if (alive) setError((e as Error).message);
+        if (alive) setError(e as Error);
       } finally {
         if (alive) setLoading(false);
       }
@@ -69,7 +70,6 @@ export function Pagination({
 }) {
   return (
     <>
-      {error && <Notice>{error}</Notice>}
       <div className="pagination">
         <button
           className="secondary"
