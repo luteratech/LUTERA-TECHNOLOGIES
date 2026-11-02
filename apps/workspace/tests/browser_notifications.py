@@ -25,6 +25,7 @@ def fixture(route):
  if action=='business/policy':return reply({'version':1,'payload':{'portal_upload_limit':5,'response_hours':24}})
  if action=='business/backup-run':pending.append(route);return
  if action=='auth/signout':return reply({'success':True})
+ if action=='portal/session':return reply({'error':'Sign in to continue'},401)
  return reply({})
 with sync_playwright() as p:
  browser=p.chromium.launch(executable_path=shutil.which('chromium')or None,headless=True,args=['--no-sandbox'])
@@ -72,5 +73,6 @@ with sync_playwright() as p:
  page.set_viewport_size({'width':1280,'height':900});page.get_by_role('button',name='Sign out',exact=True).click()
  page.get_by_role('heading',name='Welcome back.',exact=True).wait_for();expect(region.locator('article')).to_have_count(0)
  page.get_by_role('button',name='Notifications',exact=True).click();page.get_by_text('No notifications yet.',exact=True).wait_for()
+ page.goto(origin+'/portal');page.get_by_role('heading',name='Sign in to view shared documents.',exact=True).wait_for();expect(region.locator('article')).to_have_count(0)
  assert not errors,errors;browser.close()
 print('PASS: in-app backup progress/result/error/retry, duplicate-click guard, persistent errors, primary-versus-Drive wording, custom form validation, keyboard/focus, responsive notification history and sign-out clearing. No real backups or emails.')

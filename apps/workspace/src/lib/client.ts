@@ -88,7 +88,7 @@ export async function api<T = unknown>(
   options: { notifications?: boolean } = {},
 ): Promise<T> {
   const id = crypto.randomUUID();
-  const enabled = options.notifications !== false && action !== "session";
+  const enabled = options.notifications !== false && !["session", "portal/session"].includes(action);
   const timer =
     enabled && body !== undefined && action !== "records"
       ? setTimeout(
@@ -107,6 +107,7 @@ export async function api<T = unknown>(
       clearNotices();
     return result;
   } catch (error) {
+    if(action === "portal/session" && error instanceof ApiError && error.status === 401)clearNotices();
     if (enabled) {
       appNotice(feedbackText(error), "error");
       if (error instanceof ApiError) error.notified = true;
