@@ -27,7 +27,13 @@ import {
 } from "./contracts";
 import type { DocumentSignature } from "./suite";
 import { lutera as b } from "./brand";
-import { brandLogo, brandedSVG, escapeXML, labRowsSVG } from "./export-brand";
+import {
+  brandLogo,
+  brandedSVG,
+  escapeXML,
+  labRowsSVG,
+  corporateFooter,
+} from "./export-brand";
 
 export const documentTitle = (kind: string) =>
   ({
@@ -107,22 +113,13 @@ export async function financialTemplate(
     doc.customer.email,
     doc.customer.phone,
   ].filter(Boolean);
-  const bank = [company.bank_name, company.account_name, company.account_number]
-    .filter(Boolean)
-    .join(" · ");
+  const footer = corporateFooter(company, !unpriced && doc.kind !== "receipt");
   const sections = [
     ...(doc.kind === "receipt"
       ? [
           `Payment method: ${doc.payment_method}`,
           `Payment reference: ${doc.payment_reference || "—"}`,
         ]
-      : []),
-    ...(bank && !unpriced && doc.kind !== "receipt"
-      ? [`Payment details: ${bank}`]
-      : []),
-    ...(company.tax_id ? [`Tax identification: ${company.tax_id}`] : []),
-    ...(company.registration_number
-      ? [`Company registration: ${company.registration_number}`]
       : []),
     ...(doc.notes ? [doc.notes] : []),
     ...(company.document_notes ? [company.document_notes] : []),
@@ -154,6 +151,8 @@ export async function financialTemplate(
         "Sora-600.ttf",
         "ExportFallback.ttf",
         "ExportFallback-Bold.ttf",
+        "JetBrainsMono-Regular.ttf",
+        "JetBrainsMono-Medium.ttf",
       ].map(async (file) =>
         pdf.embedFont(
           await readFile(path.join(process.cwd(), "public/fonts", file)),
@@ -162,8 +161,8 @@ export async function financialTemplate(
       ),
     );
     const sets = fonts.map((f) => new Set(f.getCharacterSet()));
-    const choose = (text: string, strong = false) => {
-      const preferred = strong ? 1 : 0,
+    const choose = (text: string, strong = false, mono = false) => {
+      const preferred = mono ? (strong ? 5 : 4) : strong ? 1 : 0,
         alternate = strong ? 3 : 2;
       const index = [...text].every((c) =>
         sets[preferred].has(c.codePointAt(0)!),
@@ -176,13 +175,22 @@ export async function financialTemplate(
         );
       return fonts[index];
     };
-    const wrap = (value: string, available: number, size = 9, strong = false) =>
+    const wrap = (
+      value: string,
+      available: number,
+      size = 9,
+      strong = false,
+      mono = false,
+    ) =>
       value.split("\n").flatMap((paragraph) => {
         const result: string[] = [];
         let line = "";
         for (const word of paragraph.split(/\s+/)) {
           const test = (line + " " + word).trim();
-          if (choose(test, strong).widthOfTextAtSize(test, size) <= available) {
+          if (
+            choose(test, strong, mono).widthOfTextAtSize(test, size) <=
+            available
+          ) {
             line = test;
             continue;
           }
@@ -193,8 +201,10 @@ export async function financialTemplate(
           for (const char of word) {
             if (
               line &&
-              choose(line + char, strong).widthOfTextAtSize(line + char, size) >
-                available
+              choose(line + char, strong, mono).widthOfTextAtSize(
+                line + char,
+                size,
+              ) > available
             ) {
               result.push(line);
               line = "";
@@ -204,6 +214,14 @@ export async function financialTemplate(
         }
         return [...result, line];
       });
+    const footerRows = footer.flatMap((row) =>
+      wrap(row.text, width, 7.5, false, row.mono).map((text) => ({
+        text,
+        mono: row.mono,
+      })),
+    );
+    const footerTop = margin + (footerRows.length - 1) * 10.5;
+    const minY = footerTop + 28;
     const darkMark = await pdf.embedPng(dark),
       smallMark = await pdf.embedPng(small);
     const pattern = await pdf.embedPng(
@@ -220,12 +238,13 @@ export async function financialTemplate(
       size = 9,
       strong = false,
       fill: string = b.ink,
+      mono = false,
     ) =>
       page.drawText(value, {
         x,
         y: baseline,
         size,
-        font: choose(value, strong),
+        font: choose(value, strong, mono),
         color: color(fill),
       });
     const right = (
@@ -235,20 +254,22 @@ export async function financialTemplate(
       available: number,
       strong = false,
       fill: string = b.ink,
+      mono = true,
     ) => {
       let size = 9;
       while (
         size > 6 &&
-        choose(value, strong).widthOfTextAtSize(value, size) > available
+        choose(value, strong, mono).widthOfTextAtSize(value, size) > available
       )
         size -= 0.25;
       text(
         value,
-        end - choose(value, strong).widthOfTextAtSize(value, size),
+        end - choose(value, strong, mono).widthOfTextAtSize(value, size),
         baseline,
         size,
         strong,
         fill,
+        mono,
       );
     };
     const rule = (baseline: number) =>
@@ -269,7 +290,7 @@ export async function financialTemplate(
         });
         page.drawImage(darkMark, { x: margin, y: 756, width: 145, height: 42 });
         text(heading, margin, 710, 25, true, b.white);
-        text(reference, margin, 685, 10, false, b.white);
+        text(reference, margin, 685, 10, false, b.white, true);
         page.drawImage(pattern, { x: 423, y: 684, width: 185, height: 58 });
         y = 640;
       } else {
@@ -281,13 +302,14 @@ export async function financialTemplate(
           330,
           false,
           b.muted,
+          false,
         );
         rule(779);
         y = 750;
       }
     };
     const ensure = (height: number) => {
-      if (y - height < 65) {
+      if (y - height < minY) {
         page = pdf.addPage([pageWidth, pageHeight]);
         header();
       }
@@ -342,7 +364,13 @@ export async function financialTemplate(
     if (y === partyTop) y -= 14;
     y -= 15;
     for (const [label, value] of facts) {
-      const valueLines = wrap(value, width - 151, 8.5);
+      const valueLines = wrap(
+        value,
+        width - 151,
+        8.5,
+        false,
+        label === "Document reference",
+      );
       const height = Math.max(25, valueLines.length * 13 + 12);
       ensure(height + 2);
       page.drawRectangle({
@@ -362,7 +390,15 @@ export async function financialTemplate(
       });
       text(label, margin + 8, y - 16, 8.5, true, b.secondary);
       valueLines.forEach((line, i) =>
-        text(line, margin + 151, y - 16 - i * 13, 8.5),
+        text(
+          line,
+          margin + 151,
+          y - 16 - i * 13,
+          8.5,
+          false,
+          b.ink,
+          label === "Document reference",
+        ),
       );
       y -= height;
     }
@@ -393,14 +429,14 @@ export async function financialTemplate(
       const itemLines = wrap(item.description, columns[0] - 16, 9);
       let offset = 0;
       while (offset < itemLines.length) {
-        if (y < 101) {
+        if (y < minY + 36) {
           page = pdf.addPage([pageWidth, pageHeight]);
           header();
           tableHeader();
         }
         const count = Math.min(
           itemLines.length - offset,
-          Math.max(1, Math.floor((y - 79) / 14)),
+          Math.max(1, Math.floor((y - minY - 14) / 14)),
         );
         const height = count * 14 + 14;
         page.drawRectangle({
@@ -487,7 +523,7 @@ export async function financialTemplate(
       height: 14,
       color: color(b.blue),
     });
-    text("Notes & payment details", margin + 12, y, 10, true, b.navy);
+    text("Notes", margin + 12, y, 10, true, b.navy);
     y -= 22;
     for (const section of sections) paragraph(section);
     for (const approval of approvals) {
@@ -527,28 +563,31 @@ export async function financialTemplate(
     const pageCount = pdf.getPageCount() + approvals.length;
     for (const [index, p] of pdf.getPages().entries()) {
       p.drawLine({
-        start: { x: margin, y: 45 },
-        end: { x: pageWidth - margin, y: 45 },
+        start: { x: margin, y: footerTop + 12 },
+        end: { x: pageWidth - margin, y: footerTop + 12 },
         thickness: 0.5,
         color: color(b.border),
       });
-      const footer = `${company.company.name} · ${reference}`;
-      let size = 7;
-      while (
-        choose(footer).widthOfTextAtSize(footer, size) > width - 100 &&
-        size > 5
-      )
-        size -= 0.25;
-      p.drawText(footer, {
+      footerRows.forEach((row, i) =>
+        p.drawText(row.text, {
+          x: margin,
+          y: footerTop - i * 10.5,
+          size: 7.5,
+          font: choose(row.text, false, row.mono),
+          color: color(b.muted),
+        }),
+      );
+      const ref = wrap(reference, width - 100, 7, false, true)[0];
+      p.drawText(ref, {
         x: margin,
-        y: 29,
-        size,
-        font: choose(footer),
+        y: margin - 15,
+        size: 7,
+        font: choose(ref, false, true),
         color: color(b.muted),
       });
       p.drawText(`Page ${index + 1} of ${pageCount}`, {
         x: pageWidth - margin - 67,
-        y: 29,
+        y: margin - 15,
         size: 7,
         font: fonts[0],
         color: color(b.muted),
@@ -567,6 +606,7 @@ export async function financialTemplate(
       strong = false,
       fill: string = b.ink,
       size = 20,
+      family = "Sora",
     ) =>
       new Paragraph({
         children: value.split("\n").map(
@@ -575,7 +615,7 @@ export async function financialTemplate(
               text,
               break: i ? 1 : undefined,
               bold: strong,
-              font: "Sora",
+              font: family,
               size,
               color: hex(fill),
             }),
@@ -595,7 +635,12 @@ export async function financialTemplate(
         { style: BorderStyle.SINGLE, size: 4, color: hex(b.border) },
       ]),
     );
-    const row = (values: string[], head = false, metadata = false) =>
+    const row = (
+      values: string[],
+      head = false,
+      metadata = false,
+      numeric: number[] = [],
+    ) =>
       new TableRow({
         tableHeader: head,
         cantSplit: true,
@@ -614,6 +659,7 @@ export async function financialTemplate(
                   head || (metadata && !i),
                   head ? b.white : metadata && !i ? b.secondary : b.ink,
                   18,
+                  numeric.includes(i) ? "JetBrains Mono" : "Sora",
                 ),
               ],
             }),
@@ -645,7 +691,21 @@ export async function financialTemplate(
           properties: {
             page: {
               size: { width: 11906, height: 16838 },
-              margin: { top: 850, bottom: 1134, left: 1134, right: 1134 },
+              margin: {
+                top: 1134,
+                bottom: Math.max(
+                  1134,
+                  footer.reduce(
+                    (n, r) => n + Math.ceil(r.text.length / 105),
+                    0,
+                  ) *
+                    240 +
+                    560,
+                ),
+                left: 1134,
+                right: 1134,
+                footer: 400,
+              },
             },
           },
           headers: {
@@ -663,6 +723,21 @@ export async function financialTemplate(
           footers: {
             default: new Footer({
               children: [
+                ...footer.map(
+                  (r) =>
+                    new Paragraph({
+                      spacing: { after: 30, line: 210 },
+                      children: [
+                        new TextRun({
+                          text: r.text,
+                          font: r.mono ? "JetBrains Mono" : "Sora",
+                          size: 15,
+                          color: hex(b.muted),
+                        }),
+                      ],
+                    }),
+                ),
+
                 new Paragraph({
                   alignment: AlignmentType.RIGHT,
                   children: [
@@ -728,7 +803,9 @@ export async function financialTemplate(
             ]),
             spacer(),
             table(
-              facts.map((f) => row(f, false, true)),
+              facts.map((f) =>
+                row(f, false, true, f[0] === "Document reference" ? [1] : []),
+              ),
               [2800, 6838],
             ),
             spacer(),
@@ -750,6 +827,9 @@ export async function financialTemplate(
                           money(i.unit_minor, doc.currency),
                           money(i.quantity * i.unit_minor, doc.currency),
                         ],
+                    false,
+                    false,
+                    unpriced ? [1] : [1, 2, 3],
                   ),
                 ),
               ],
@@ -763,13 +843,15 @@ export async function financialTemplate(
                       row(
                         [label, money(value, doc.currency)],
                         i === summary.length - 1,
+                        false,
+                        [1],
                       ),
                     ),
                   ),
                 ]
               : []),
             spacer(),
-            paragraph("Notes & payment details", true, b.navy, 22),
+            paragraph("Notes", true, b.navy, 22),
             ...sections.map((s) => paragraph(s)),
             ...approvals.flatMap((a) => [
               spacer(),
@@ -818,17 +900,28 @@ export async function financialTemplate(
     m = 113,
     bodyWidth = w - m * 2;
   const fonts = await Promise.all(
-    ["Sora-400.ttf", "Sora-600.ttf"].map(async (f) =>
+    [
+      "Sora-400.ttf",
+      "Sora-600.ttf",
+      "JetBrainsMono-Regular.ttf",
+      "JetBrainsMono-Medium.ttf",
+    ].map(async (f) =>
       fontkit.create(
         await readFile(path.join(process.cwd(), "public/fonts", f)),
       ),
     ),
   );
-  const wrap = (value: string, available: number, size = 19, strong = false) =>
+  const wrap = (
+    value: string,
+    available: number,
+    size = 19,
+    strong = false,
+    mono = false,
+  ) =>
     value.split("\n").flatMap((p) => {
       const result: string[] = [];
       let line = "";
-      const font = fonts[strong ? 1 : 0];
+      const font = fonts[mono ? (strong ? 3 : 2) : strong ? 1 : 0];
       const measure = (s: string) =>
         (font.layout(s).positions.reduce((n, p) => n + p.xAdvance, 0) * size) /
         font.unitsPerEm;
@@ -859,9 +952,27 @@ export async function financialTemplate(
     strong = false,
     fill: string = b.ink,
     end = false,
+    mono = end,
   ) =>
-    `<text x="${x}" y="${y}" font-size="${size}" font-weight="${strong ? 600 : 400}" fill="${fill}"${end ? ' text-anchor="end"' : ""}>${escapeXML(s)}</text>`;
-  let inner = `<rect width="${w}" height="348" fill="${b.navy}"/><image x="${m}" y="84" width="290" height="84" href="data:image/png;base64,${dark.toString("base64")}"/>${labRowsSVG(850, 190, 1.1)}${text(heading, m, 263, 50, true, b.white)}${text(reference, m, 313, 20, false, b.white)}`;
+    `<text x="${x}" y="${y}" font-size="${size}" font-weight="${strong ? 600 : 400}" fill="${fill}"${end ? ' text-anchor="end"' : ""}${mono ? ' font-family="JetBrains Mono"' : ""}>${escapeXML(s)}</text>`;
+  const amountText = (value: string, column: number, baseline: number) => {
+    const font = fonts[2],
+      available = columns[column] - 32;
+    const measured =
+      font.layout(value).positions.reduce((n, p) => n + p.xAdvance, 0) /
+      font.unitsPerEm;
+    const size = Math.min(17, available / Math.max(1, measured));
+    return text(
+      value,
+      starts[column] + columns[column] - 16,
+      baseline,
+      size,
+      false,
+      b.ink,
+      true,
+    );
+  };
+  let inner = `<rect width="${w}" height="348" fill="${b.navy}"/><image x="${m}" y="84" width="290" height="84" href="data:image/png;base64,${dark.toString("base64")}"/>${labRowsSVG(850, 190, 1.1)}${text(heading, m, 263, 50, true, b.white)}${text(reference, m, 313, 20, false, b.white, false, true)}`;
   let y = 402;
   const party = (values: string[]) =>
     values.flatMap((s, i) => wrap(s, bodyWidth / 2 - 40, i ? 17 : 20, !i));
@@ -887,10 +998,28 @@ export async function financialTemplate(
   }
   y += 26;
   for (const [label, value] of facts) {
-    const rows = wrap(value, bodyWidth - 310, 18),
+    const rows = wrap(
+        value,
+        bodyWidth - 310,
+        18,
+        false,
+        label === "Document reference",
+      ),
       h = Math.max(50, rows.length * 27 + 24);
     inner += `<rect x="${m}" y="${y}" width="${bodyWidth}" height="${h}" fill="white" stroke="${b.border}"/><rect x="${m + 1}" y="${y + 1}" width="280" height="${h - 2}" fill="${b.wash}"/>${text(label, m + 16, y + 32, 18, true, b.secondary)}`;
-    rows.forEach((s, i) => (inner += text(s, m + 302, y + 32 + i * 27, 18)));
+    rows.forEach(
+      (s, i) =>
+        (inner += text(
+          s,
+          m + 302,
+          y + 32 + i * 27,
+          18,
+          false,
+          b.ink,
+          false,
+          label === "Document reference",
+        )),
+    );
     y += h;
   }
   y += 44;
@@ -918,34 +1047,10 @@ export async function financialTemplate(
         (x) => (inner += `<path d="M${x} ${y}v${h}" stroke="${b.border}"/>`),
       );
     rows.forEach((s, i) => (inner += text(s, m + 16, y + 34 + i * 28)));
-    inner += text(
-      String(item.quantity),
-      starts[1] + columns[1] - 16,
-      y + 34,
-      17,
-      false,
-      b.ink,
-      true,
-    );
+    inner += amountText(String(item.quantity), 1, y + 34);
     if (!unpriced) {
-      inner += text(
-        number(item.unit_minor),
-        starts[2] + columns[2] - 16,
-        y + 34,
-        17,
-        false,
-        b.ink,
-        true,
-      );
-      inner += text(
-        number(item.unit_minor * item.quantity),
-        w - m - 16,
-        y + 34,
-        17,
-        false,
-        b.ink,
-        true,
-      );
+      inner += amountText(number(item.unit_minor), 2, y + 34);
+      inner += amountText(number(item.unit_minor * item.quantity), 3, y + 34);
     }
     y += h;
   }
@@ -969,7 +1074,7 @@ export async function financialTemplate(
       y += final ? 68 : 42;
     }
   y += 22;
-  inner += `<rect x="${m}" y="${y - 22}" width="6" height="28" fill="${b.blue}"/>${text("Notes & payment details", m + 24, y, 21, true, b.navy)}`;
+  inner += `<rect x="${m}" y="${y - 22}" width="6" height="28" fill="${b.blue}"/>${text("Notes", m + 24, y, 21, true, b.navy)}`;
   y += 42;
   for (const section of sections) {
     for (const line of wrap(section, bodyWidth - 24)) {
@@ -980,15 +1085,18 @@ export async function financialTemplate(
   }
   y += 40;
   inner += `<path d="M${m} ${y}h${bodyWidth}" stroke="${b.border}"/>`;
-  y += 35;
-  inner += text(
-    `${company.company.name} · ${reference}`,
-    m,
-    y,
-    14,
-    false,
-    b.muted,
-  );
+  y += 30;
+  for (const row of footer) {
+    for (const line of wrap(row.text, bodyWidth, 15, false, row.mono)) {
+      inner += text(line, m, y, 15, false, b.muted, false, row.mono);
+      y += 23;
+    }
+  }
+  y += 12;
+  for (const line of wrap(reference, bodyWidth, 14, false, true)) {
+    inner += text(line, m, y, 14, false, b.muted, false, true);
+    y += 22;
+  }
   return brandedSVG(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${y + 48}"><rect width="100%" height="100%" fill="white"/>${inner}</svg>`,
   );

@@ -3,6 +3,39 @@ import path from "node:path";
 import fontkit from "@pdf-lib/fontkit";
 import sharp from "sharp";
 import { lutera } from "./brand";
+import type { Settings } from "./contracts";
+
+export function corporateFooter(company: Settings, showBank = true) {
+  const bank = [company.bank_name, company.account_name, company.account_number]
+    .filter(Boolean)
+    .join(" · ");
+  return [
+    {
+      text: [
+        company.company.name,
+        company.registration_number ? `RC ${company.registration_number}` : "",
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      mono: false,
+    },
+    { text: company.company.address, mono: false },
+    {
+      text: [
+        company.company.email,
+        company.company.phone,
+        company.company.website,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      mono: false,
+    },
+    ...(showBank && bank ? [{ text: `Bank: ${bank}`, mono: true }] : []),
+    ...(company.tax_id
+      ? [{ text: `Tax ID: ${company.tax_id}`, mono: true }]
+      : []),
+  ].filter((row) => row.text.trim());
+}
 
 export const escapeXML = (s: string) =>
   s.replace(
@@ -51,6 +84,8 @@ const exportFonts = () =>
       "Sora-600.ttf",
       "ExportFallback.ttf",
       "ExportFallback-Bold.ttf",
+      "JetBrainsMono-Regular.ttf",
+      "JetBrainsMono-Medium.ttf",
     ].map(async (f) =>
       fontkit.create(
         await readFile(path.join(process.cwd(), "public/fonts", f)),
@@ -74,7 +109,8 @@ export async function brandedSVG(svg: string) {
           ({ amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" })[n]!,
       );
       const strong = Number(attr("font-weight", "400")) >= 600;
-      const preferred = loaded[strong ? 1 : 0];
+      const mono = attr("font-family", "").includes("JetBrains");
+      const preferred = loaded[mono ? (strong ? 5 : 4) : strong ? 1 : 0];
       const font = [...text].every((c) =>
         preferred.hasGlyphForCodePoint(c.codePointAt(0)!),
       )

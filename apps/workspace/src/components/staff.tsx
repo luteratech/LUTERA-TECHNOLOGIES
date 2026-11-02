@@ -142,7 +142,8 @@ function Editor({
     [dirty, setDirty] = useState(false),
     [template, setTemplate] = useState<"name" | "id">("name"),
     [side, setSide] = useState<"front" | "back">("front"),
-    [confirm, setConfirm] = useState(false);
+    [confirm, setConfirm] = useState(false),
+    [bleed, setBleed] = useState(false);
   useEffect(() => {
     if (record) {
       setValue(record.payload);
@@ -203,6 +204,7 @@ function Editor({
         format,
         template,
         side,
+        bleed: format === "pdf" && bleed,
       });
     } catch (e) {
       setMessage((e as Error).message);
@@ -351,79 +353,102 @@ function Editor({
               </select>
             </Field>
           </div>
-          <div className={`card-preview ${template} ${side}`}>
-            <img
-              className="card-logo"
-              src={`/brand/lutera-horizontal-${side === "back" ? "dark" : "light"}.svg`}
-              alt="Lutera"
-            />
-            {side === "front" ? (
+          <div
+            className={`card-preview ${template} ${side}`}
+            aria-label={`${template === "name" ? "Business card" : "Staff ID"} ${side} preview`}
+          >
+            {(template === "id" || side === "front") && (
               <>
-                {template === "id" && (
-                  <div className="portrait">
-                    {value.photo_path ? (
-                      <img
-                        src={`/api/photo/${value.photo_path}`}
-                        alt="Staff portrait"
-                      />
-                    ) : (
-                      <span>Photograph</span>
-                    )}
+                <span className="card-graphic" aria-hidden="true" />
+                <img
+                  className="card-logo"
+                  src={`/brand/lutera-horizontal-${template === "name" ? "descriptor-" : ""}dark.svg`}
+                  alt="Lutera"
+                />
+              </>
+            )}
+            {template === "name" ? (
+              side === "front" ? (
+                <>
+                  <p className="card-tagline">Supply. Build. Connect.</p>
+                  <p className="card-legal">{settings.company.name}</p>
+                </>
+              ) : (
+                <>
+                  <h3 className="card-person">{value.name || "Staff name"}</h3>
+                  <p className="card-job">{value.title || "Job title"}</p>
+                  <div className="card-contact">
+                    <span>{value.email || settings.company.email}</span>
+                    <span>{value.phone || settings.company.phone}</span>
+                    <span>{settings.company.website}</span>
                   </div>
-                )}
-                <h3>{value.name || "Staff name"}</h3>
-                <p className="job">{value.title || "Job title"}</p>
-                {template === "id" ? (
-                  <>
-                    <p>{value.department}</p>
-                    <p>Staff ID: {value.staff_number || "—"}</p>
-                    <small>
-                      Issued {value.issued_on}
-                      {value.expires_on && <> · Expires {value.expires_on}</>}
-                    </small>
-                  </>
-                ) : (
-                  <p>
-                    {value.email || settings.company.email}
-                    <br />
-                    {value.phone || settings.company.phone}
-                    <br />
-                    {settings.company.website}
-                  </p>
-                )}
-                {(!value.active ||
-                  (value.expires_on &&
-                    value.expires_on <
-                      new Date().toISOString().slice(0, 10))) && (
-                  <strong className="invalid-card">
-                    {!value.active ? "INACTIVE" : "EXPIRED"}
-                  </strong>
-                )}
+                  {/Abuja/i.test(settings.company.address) && (
+                    <p className="card-location">Abuja, Nigeria</p>
+                  )}
+                </>
+              )
+            ) : side === "front" ? (
+              <>
+                <div className="portrait">
+                  {value.photo_path ? (
+                    <img
+                      src={`/api/photo/${value.photo_path}`}
+                      alt="Staff portrait"
+                    />
+                  ) : (
+                    <span>Photograph</span>
+                  )}
+                </div>
+                <h3 className="card-person">{value.name || "Staff name"}</h3>
+                <p className="card-job">{value.title || "Job title"}</p>
+                <p className="card-department">{value.department}</p>
+                <p className="card-staff-id document-reference">
+                  {value.staff_number || "Staff number"}
+                </p>
+                <div className="card-dates">
+                  <span>Issued {value.issued_on}</span>
+                  {value.expires_on && <span>Expires {value.expires_on}</span>}
+                </div>
               </>
             ) : (
               <>
-                <h3>{settings.company.name}</h3>
-                <p>Supply. Build. Connect.</p>
-                <p>{settings.company.address}</p>
-                <p>
-                  {settings.company.email}
-                  <br />
-                  {settings.company.phone}
-                  <br />
-                  {settings.company.website}
+                <h3 className="card-back-heading">Company identification</h3>
+                <h3 className="card-company">{settings.company.name}</h3>
+                <p className="card-address">{settings.company.address}</p>
+                <div className="card-contact">
+                  <span>{settings.company.email}</span>
+                  <span>{settings.company.phone}</span>
+                  <span>{settings.company.website}</span>
+                </div>
+                <p className="card-return">
+                  Property of Lutera. If found, contact the company. This is not
+                  a government-issued identity document.
                 </p>
-                {template === "id" && (
-                  <small>
-                    Property of Lutera. If found, contact the company. This is
-                    not a government-issued identity document.
-                  </small>
-                )}
               </>
             )}
+            {(!value.active ||
+              (value.expires_on &&
+                value.expires_on <
+                  new Date().toLocaleDateString("en-CA", {
+                    timeZone: "Africa/Lagos",
+                  }))) && (
+              <strong className="invalid-card">
+                {!value.active ? "Inactive" : "Expired"}
+              </strong>
+            )}
           </div>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={bleed}
+              onChange={(e) => setBleed(e.target.checked)}
+            />
+            Include 3 mm print bleed and crop marks in PDF
+          </label>
           <p className="muted">
-            Preview is indicative. PDF includes both sides at print size. PNG
-            exports the selected side. Word exports contain both card images.
+            Preview shows the card layout. PDF includes both sides at print
+            size, with optional bleed for a printer. PNG exports the selected
+            side. Word exports contain both card images.
           </p>
           <div className="actions">
             {(["pdf", "docx", "png"] as const).map((f) => (

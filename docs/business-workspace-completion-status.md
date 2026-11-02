@@ -79,8 +79,10 @@ emails are required by these checks.
 
 1. **Google Drive:** install and authorize the company-account Apps Script trigger
    described in the [operations runbook](business-workspace-operations.md#encrypted-backups-supabase-then-google-drive).
-   The user confirmed this is not installed. Supabase is the primary private
-   encrypted backup destination; unattended Drive copies need this authorization.
+   The company destination is now verified as **luteratech2@gmail.com**. A
+   checksum-verified 23 October encrypted snapshot has been copied there; a
+   fresh primary run and the daily Drive trigger still need verification.
+   Supabase remains primary. See the runbook for the one-time authorization.
 2. **Website publishing hook:** confirmed present in the private project's
    production environment on 27 October. The contact/navigation release deploys
    with this setting. A signed-in draft → Publish → live-revision acceptance
@@ -92,7 +94,7 @@ emails are required by these checks.
    active, but production malware scanning is not claimed.
 4. **Supabase Auth:** enable [leaked-password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)
    if supported by the account plan. The provider advisor still reports it off.
-5. **Company acceptance:** owner/accountant confirm tax/bank details, opening
+5. **Company acceptance:** the owner confirms tax/bank details, opening
    balances, initial stock, actual approval limits, service commitments, retention
    and recovery targets. Operations settings expose the relevant configuration;
    retention does not silently delete evidence. External reminders start disabled.
@@ -101,5 +103,8 @@ emails are required by these checks.
    decision; production credentials must not be given to untrusted previews.
 
 These items prevent declaring the entire programme operationally signed off.
-Payroll, statutory general-ledger accounting, bank transfers, payment gateways
-and external accounting synchronization are outside the agreed scope.
+Full internal accounting was subsequently authorized and its core ledger is
+implemented in the owner release. See the [accounting readiness checklist](accounting-readiness-information-checklist.md)
+for the information, reconciliations and remaining automation/tax checks.
+Payroll, initiating bank transfers, payment gateways and external accounting
+synchronization are not part of the current agreed release.

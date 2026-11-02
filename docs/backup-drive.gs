@@ -3,7 +3,7 @@
  * owner's downloaded Drive setup file. Run installLuteraBackup once and approve
  * Google Drive / external request access using Lutera's designated account.
  */
-const LUTERA_FOLDER = '1W_idKvhJdpkaapikUcoErR_ErdUuKrVh';
+const LUTERA_FOLDER = '1M5R-up413YeEzlRudOPObu2f258gkktD';
 function copyLuteraBackups() {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(1000)) return;
@@ -14,6 +14,7 @@ function copyLuteraBackups() {
     if (!url || !token || !/^https:\/\/workspace\.luteratech\.com\//.test(url)) throw new Error('Configure the company backup connection in Script Properties.');
     const headers = {Authorization: 'Bearer ' + token};
     const folder = DriveApp.getFolderById(LUTERA_FOLDER);
+    if (folder.getOwner().getEmail().toLowerCase() !== 'luteratech2@gmail.com') throw new Error('Use the Lutera company backup folder.');
     for (let n = 0; n < 5; n++) {
       const response = UrlFetchApp.fetch(url, {headers, muteHttpExceptions:true});
       if (response.getResponseCode() === 204) return;

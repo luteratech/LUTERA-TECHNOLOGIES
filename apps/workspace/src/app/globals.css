@@ -1,4 +1,16 @@
 @import "./brand-tokens.css";
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/JetBrainsMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/JetBrainsMono-Medium.woff2") format("woff2");
+  font-weight: 500 600;
+  font-display: swap;
+}
 
 @font-face {
   font-family: LuteraSymbols;
@@ -66,7 +78,7 @@ button {
   color: white;
   min-height: 44px;
   padding: 10px 18px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition:
@@ -118,17 +130,19 @@ textarea {
   width: 100%;
   padding: 11px 12px;
   min-height: 44px;
-  border: 1px solid #b8bece;
-  border-radius: 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   background: white;
   color: var(--navy);
-  font-size: 14px;
+  font-size: 16px;
 }
 input:focus,
 select:focus,
 textarea:focus {
+  border-color: var(--blue);
   outline: 2px solid var(--blue);
-  outline-offset: 1px;
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
 }
 input:disabled,
 select:disabled,
@@ -197,13 +211,14 @@ img {
 .field {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  margin-bottom: 19px;
-  font-size: 12px;
-  font-weight: 600;
+  gap: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg-2);
 }
 .field > span {
-  text-transform: capitalize;
+  text-transform: none;
 }
 .field input,
 .field select,
@@ -385,7 +400,7 @@ legend {
   font-size: 12px;
 }
 .account small {
-  text-transform: capitalize;
+  text-transform: none;
 }
 .workspace-grid {
   display: grid;
@@ -471,7 +486,7 @@ main#workspace-main {
   background: white;
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 25px;
+  padding: 24px;
 }
 .stat span {
   font-size: 12px;
@@ -547,7 +562,7 @@ th {
   border-bottom: 1px solid var(--line);
 }
 td {
-  padding: 19px 12px;
+  padding: 20px 12px;
   border-bottom: 1px solid #e8eaf0;
   vertical-align: middle;
 }
@@ -683,13 +698,13 @@ td button {
 .card-preview {
   border: 1px solid var(--line);
   border-radius: 10px;
-  padding: 25px;
+  padding: 24px;
   aspect-ratio: 85 / 55;
   background: var(--paper);
   overflow: hidden;
   color: var(--navy);
   box-shadow: 0 15px 35px #161a3d10;
-  margin: 25px 0;
+  margin: 24px 0;
 }
 .card-preview .card-logo {
   width: 120px;
@@ -770,7 +785,7 @@ td button {
   margin-bottom: 28px;
 }
 .subnav button {
-  text-transform: capitalize;
+  text-transform: none;
 }
 .service-edit {
   padding: 20px;
@@ -1223,7 +1238,7 @@ dialog .actions {
 .password-field {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
   margin-bottom: 18px;
   min-width: 0;
 }
@@ -2804,4 +2819,451 @@ select:disabled {
   select::picker-icon {
     transition: none;
   }
+}
+
+/* The approved brand contract for shared business UI components. */
+.numeric,
+.document-reference,
+.stat strong,
+.record-references code,
+input[inputmode="decimal"],
+input[inputmode="numeric"],
+input[name*="serial"],
+input[name*="reference"],
+input[name="staff_number"],
+input[name="account_number"] {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+table {
+  font-variant-numeric: tabular-nums;
+}
+th {
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--fg-2);
+  background: var(--surface-warm);
+}
+td {
+  color: var(--fg-2);
+  border-color: var(--border-soft);
+}
+tbody tr:hover,
+tbody tr:focus-within {
+  background: var(--surface-warm);
+}
+.field small,
+.field .muted,
+.form-help,
+.multi-picker-option small {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.field > label {
+  font-weight: 500;
+}
+.panel,
+.stat,
+.signature-record,
+.journal-line,
+.department-intro,
+.department-card,
+.tool-card,
+.import-preview,
+.content-preview,
+.profile-photo-editor {
+  border-radius: var(--radius-md);
+  border-color: var(--border);
+}
+.panel,
+.stat,
+.signature-record,
+.journal-line,
+.department-card,
+.tool-card,
+.card-preview {
+  box-shadow: none;
+}
+.badge,
+.badge.issued,
+.badge.void,
+.security-badge {
+  --status-color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--fg-2);
+  background: var(--surface-warm);
+  line-height: 1.5;
+}
+.badge::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--status-color);
+}
+.badge[data-tone="success"],
+.security-badge {
+  --status-color: var(--success);
+  background: color-mix(in srgb, var(--success) 10%, var(--surface));
+}
+.badge[data-tone="warning"] {
+  --status-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 10%, var(--surface));
+}
+.badge[data-tone="danger"] {
+  --status-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+}
+.badge[data-tone="brand"] {
+  --status-color: var(--blue);
+  background: var(--surface-warm);
+}
+.notice,
+.error {
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  padding: 16px;
+}
+.error {
+  position: relative;
+  padding-left: 48px;
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--surface));
+  color: var(--fg-2);
+  background: color-mix(in srgb, var(--danger) 7%, var(--surface));
+}
+.error::before {
+  content: "!";
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--danger);
+  border-radius: 50%;
+  color: var(--danger);
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  line-height: 1;
+}
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+.operation-record,
+.record-row {
+  border-color: var(--border-soft);
+}
+@media (prefers-reduced-motion: no-preference) {
+  tbody tr {
+    transition: background var(--motion-fast) var(--ease-standard);
+  }
+}
+
+/* Brand-book print layouts mirrored in the screen preview. */
+.card-preview.name,
+.card-preview.id {
+  container-type: inline-size;
+  position: relative;
+  padding: 0;
+  border-radius: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+.card-preview.name {
+  aspect-ratio: 85 / 55;
+}
+.card-preview.name.front,
+.card-preview.id {
+  background: var(--navy);
+  color: white;
+}
+.card-preview.name.back {
+  background: var(--paper);
+  color: var(--ink);
+}
+.card-preview.id {
+  width: min(100%, 324px);
+  min-height: 0;
+  height: auto;
+  aspect-ratio: 54 / 86;
+}
+.card-preview .card-logo,
+.card-preview .card-graphic,
+.card-preview .card-person,
+.card-preview .card-job,
+.card-preview .card-contact,
+.card-preview .card-legal,
+.card-preview .card-tagline,
+.card-preview .card-location,
+.card-preview .card-department,
+.card-preview .card-staff-id,
+.card-preview .card-dates,
+.card-preview .card-company,
+.card-preview .card-address,
+.card-preview .card-return,
+.card-preview .card-back-heading {
+  position: absolute;
+  margin: 0;
+  z-index: 1;
+  line-height: 1.35;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+.card-preview .card-graphic {
+  z-index: 0;
+  background: #343a6e;
+  mask: url("/brand/lutera-symbol-white.svg") center / contain no-repeat;
+  -webkit-mask: url("/brand/lutera-symbol-white.svg") center / contain no-repeat;
+}
+.card-preview.name .card-graphic {
+  left: 63.73%;
+  top: 3.03%;
+  width: 46.57%;
+  height: 93.94%;
+}
+.card-preview.name .card-logo {
+  left: 5.88%;
+  top: 13.64%;
+  width: 45.1%;
+  height: auto;
+}
+.card-preview.name.front .card-tagline {
+  left: 5.88%;
+  top: 53.03%;
+  width: 54%;
+  font-size: 3.33cqw;
+  color: white;
+}
+.card-preview.name.front .card-legal {
+  left: 5.88%;
+  top: 75.76%;
+  width: 54%;
+  font-size: 2.94cqw;
+  color: white;
+}
+.card-preview.name.back .card-person {
+  left: 5.88%;
+  top: 10.61%;
+  width: 88.24%;
+  font-size: 4.51cqw;
+  color: var(--navy);
+}
+.card-preview.name.back .card-job {
+  left: 5.88%;
+  top: 32.58%;
+  width: 88.24%;
+  font-size: 3.33cqw;
+  color: var(--blue);
+}
+.card-preview.name.back .card-contact {
+  left: 5.88%;
+  top: 52.27%;
+  width: 88.24%;
+  font-size: 3.33cqw;
+  color: var(--ink);
+}
+.card-preview .card-contact span,
+.card-preview .card-dates span {
+  display: block;
+}
+.card-preview.name.back .card-location {
+  left: 5.88%;
+  top: 83.33%;
+  font-size: 2.94cqw;
+  color: var(--fg-2);
+}
+.card-preview.id .card-graphic {
+  left: 66.36%;
+  top: 14.53%;
+  width: 54.48%;
+  height: 44.57%;
+}
+.card-preview.id .card-logo {
+  left: 9.26%;
+  top: 4.84%;
+  width: 51.85%;
+  height: auto;
+}
+.card-preview.id .portrait {
+  position: absolute;
+  left: 21.6%;
+  top: 18.41%;
+  width: 56.79%;
+  height: 38.76%;
+  margin: 0;
+  padding: 2%;
+  background: var(--paper);
+  color: var(--muted);
+  border-radius: 6px;
+  font-size: 4.94cqw;
+  z-index: 1;
+}
+.card-preview.id .portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.card-preview.id .card-person {
+  left: 9.26%;
+  top: 62.02%;
+  width: 81.48%;
+  font-size: 6.17cqw;
+  color: white;
+}
+.card-preview.id .card-job {
+  left: 9.26%;
+  top: 74.13%;
+  width: 81.48%;
+  font-size: 4.32cqw;
+  color: var(--lt-cyan);
+}
+.card-preview.id .card-department {
+  left: 9.26%;
+  top: 80.43%;
+  width: 81.48%;
+  font-size: 3.7cqw;
+  color: var(--paper);
+}
+.card-preview.id .card-staff-id {
+  left: 9.26%;
+  top: 84.5%;
+  width: 81.48%;
+  font-size: 4.32cqw;
+  color: white;
+}
+.card-preview.id .card-dates {
+  left: 9.26%;
+  top: 89.44%;
+  width: 81.48%;
+  font-size: 3.24cqw;
+  color: var(--paper);
+  font-family: var(--font-mono);
+}
+.card-preview.id.back .card-back-heading {
+  left: 9.26%;
+  top: 17.44%;
+  width: 81.48%;
+  font-size: 4.63cqw;
+  color: white;
+}
+.card-preview.id.back .card-company {
+  left: 9.26%;
+  top: 23.74%;
+  width: 50.93%;
+  font-size: 4.63cqw;
+  color: white;
+}
+.card-preview.id.back .card-address {
+  left: 9.26%;
+  top: 34.88%;
+  width: 50.93%;
+  font-size: 4.01cqw;
+  color: var(--paper);
+}
+.card-preview.id.back .card-contact {
+  left: 9.26%;
+  top: 60.08%;
+  width: 81.48%;
+  font-size: 4.01cqw;
+  color: white;
+}
+.card-preview.id.back .card-return {
+  left: 9.26%;
+  top: 79.46%;
+  width: 81.48%;
+  font-size: 3.4cqw;
+  color: var(--paper);
+}
+.card-preview .invalid-card {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  top: auto;
+  width: 100%;
+  padding: 1.5% 5%;
+  background: var(--danger);
+  color: white;
+  font-size: 3cqw;
+  border-radius: 0;
+  z-index: 3;
+}
+
+/* Shared controls keep the same readable scale at every viewport. */
+.workspace .field > span,
+.auth-form .field > span,
+.portal-shell .field > span,
+.photo-upload {
+  font-size: 14px;
+  font-weight: 500;
+}
+.workspace .account-settings .field {
+  margin-bottom: 20px;
+}
+.workspace .actions button,
+.card-tools .actions button,
+.workspace .page-heading button {
+  font-size: 14px;
+  font-weight: 500;
+}
+.totals > strong,
+.ops-total strong,
+.ops-total output {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.receipt-fields,
+.service-edit,
+.content-preview .preview-services article,
+.account-feedback {
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+.receipt-fields,
+.notice {
+  background: var(--surface-warm);
+  color: var(--fg-2);
+}
+.account-feedback {
+  border-color: color-mix(in srgb, var(--success) 35%, var(--surface));
+  background: color-mix(in srgb, var(--success) 7%, var(--surface));
+  color: var(--fg-2);
+}
+.account-feedback.error {
+  padding-left: 48px;
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--surface));
+  background: color-mix(in srgb, var(--danger) 7%, var(--surface));
+  color: var(--fg-2);
+}
+.account-feedback.error::before {
+  top: 12px;
+}
+.account-step,
+.workspace-skip {
+  border-radius: var(--radius-sm);
+}
+.record-summary dt {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.form-footer {
+  margin-top: 24px;
+  padding-top: 24px;
 }

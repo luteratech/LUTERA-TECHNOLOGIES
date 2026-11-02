@@ -3,6 +3,13 @@
 **Prepared:** 22 October 2026
 **Company:** Lutera Technology Ltd
 **Status:** Implementation release prepared on 23 October 2026. See [business-workspace-operations.md](business-workspace-operations.md) for implemented workflows, verification and the remaining owner/provider configuration. A plan document alone is not deployment evidence.
+
+**Scope update — 2 November 2026:** The owner subsequently authorized full internal
+accounting. The owner/accounting release extends the initial CSV-only scope;
+see [business-suite-owner-release.md](business-suite-owner-release.md) and
+[accounting-readiness-information-checklist.md](accounting-readiness-information-checklist.md).
+The initial-scope exclusions below describe the original release, not a ban on
+that later work. Nigerian tax records remain pending until supplied.
 **Baseline reviewed:** repository commit `b4d43f6`, workspace source and deployment runbook. Provider settings and real operational records were not re-audited for this planning exercise.
 
 ## 1. Intended outcome

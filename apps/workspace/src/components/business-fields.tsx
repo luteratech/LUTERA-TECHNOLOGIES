@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useId, useState } from "react";
+import StatusBadge from "./StatusBadge";
 import { api } from "@/lib/client";
 import { minor, money } from "@/lib/contracts";
 import { businessDate, type Area, type Entity, type Row } from "@/lib/business";
@@ -706,14 +707,27 @@ export function Summary({ row }: { row: Row }) {
           .map(([k, v]) => (
             <div key={k}>
               <dt>{k.replaceAll("_", " ")}</dt>
-              <dd>
-                {k.endsWith("_minor")
-                  ? money(Number(v), String(row.currency || "NGN"))
-                  : typeof v === "boolean"
-                    ? v
-                      ? "Yes"
-                      : "No"
-                    : String(v)}
+              <dd
+                className={
+                  typeof v === "number" ||
+                  /(?:reference|number|serial|sku|code)$/.test(k)
+                    ? "numeric"
+                    : undefined
+                }
+              >
+                {k === "status" ? (
+                  <StatusBadge status={String(v)} />
+                ) : k.endsWith("_minor") ? (
+                  money(Number(v), String(row.currency || "NGN"))
+                ) : typeof v === "boolean" ? (
+                  v ? (
+                    "Yes"
+                  ) : (
+                    "No"
+                  )
+                ) : (
+                  String(v)
+                )}
               </dd>
             </div>
           ))}
@@ -725,7 +739,16 @@ export function Summary({ row }: { row: Row }) {
             {references.map(([k, v]) => (
               <div key={k}>
                 <dt>{k.replaceAll("_", " ")}</dt>
-                <dd>{String(v)}</dd>
+                <dd
+                  className={
+                    typeof v === "number" ||
+                    /(?:reference|number|serial|sku|code)$/.test(k)
+                      ? "numeric"
+                      : undefined
+                  }
+                >
+                  {String(v)}
+                </dd>
               </div>
             ))}
           </dl>

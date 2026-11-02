@@ -1,4 +1,5 @@
 "use client";
+import StatusBadge from "./StatusBadge";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client";
 import { money } from "@/lib/contracts";
@@ -176,7 +177,7 @@ export default function CustomerPortal() {
               <div className="portal-documents">
                 {state.documents.map((s) => (
                   <article className="card" key={s.id}>
-                    <span className="badge">{s.kind}</span>
+                    <StatusBadge status={s.kind} />
                     <h2>{s.number}</h2>
                     <p>{money(s.total_minor, s.currency)}</p>
                     <button

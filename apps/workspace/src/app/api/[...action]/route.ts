@@ -87,6 +87,7 @@ const check = <T>(result: {
       "Invalid line item",
       "Owner access",
       "Export permission",
+      "The printed card details",
       "Configure company",
       "Choose a different email",
       "Finish the pending email",
@@ -972,6 +973,7 @@ export async function POST(
           format: z.enum(["pdf", "docx", "png"]),
           template: z.enum(["name", "id"]).default("name"),
           side: z.enum(["front", "back"]).default("front"),
+          bleed: z.boolean().default(false),
         })
         .strict()
         .parse(input);
@@ -1017,6 +1019,7 @@ export async function POST(
           body.format,
           body.side,
           photo,
+          body.bleed,
         );
         name = `${body.template}-card-${staff.id}-${body.side}`;
       }

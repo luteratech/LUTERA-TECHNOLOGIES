@@ -33,6 +33,12 @@ export async function statementPDF(statement: StatementSnapshot) {
   const bold = await pdf.embedFont(
     await readFile(path.join(process.cwd(), "public/fonts/Sora-600.ttf")),
   );
+  const mono = await pdf.embedFont(
+    await readFile(
+      path.join(process.cwd(), "public/fonts/JetBrainsMono-Regular.ttf"),
+    ),
+    { subset: true },
+  );
   const logo = await pdf.embedPng(await brandLogo());
   const darkLogo = await pdf.embedPng(await brandLogo(true, true));
   let page = pdf.addPage([595.28, 841.89]),
@@ -55,14 +61,33 @@ export async function statementPDF(statement: StatementSnapshot) {
     size = 9,
     strong = false,
     white = false,
+    numeric = false,
   ) =>
     page.drawText(safe(text), {
       x,
       y,
       size,
-      font: strong ? bold : font,
+      font: numeric ? mono : strong ? bold : font,
       color: white ? rgb(1, 1, 1) : rgb(22 / 255, 26 / 255, 61 / 255),
     });
+  const figure = (
+    text: string,
+    end: number,
+    available = 74,
+    strong = false,
+  ) => {
+    let size = 9;
+    while (size > 6 && mono.widthOfTextAtSize(text, size) > available)
+      size -= 0.25;
+    draw(
+      text,
+      end - mono.widthOfTextAtSize(text, size),
+      size,
+      strong,
+      false,
+      true,
+    );
+  };
   const header = (cover = false) => {
     if (cover) {
       page.drawRectangle({
@@ -112,20 +137,20 @@ export async function statementPDF(statement: StatementSnapshot) {
   };
   header(true);
   draw("Opening balance", 56.69);
-  draw(amount(balance), 479);
+  figure(amount(balance), 538.59);
   y -= 25;
   for (const event of statement.events) {
     balance += Number(event.debit_minor) - Number(event.credit_minor);
     next();
     draw(`${event.posted_on}  ${event.kind}`, 56.69);
-    draw(amount(Number(event.debit_minor)), 308);
-    draw(amount(Number(event.credit_minor)), 397);
-    draw(amount(balance), 479);
+    figure(amount(Number(event.debit_minor)), 380);
+    figure(amount(Number(event.credit_minor)), 459);
+    figure(amount(balance), 538.59);
     y -= 15;
     const reference = String(event.reference);
     for (let start = 0; start < reference.length; start += 65) {
       next();
-      draw(reference.slice(start, start + 65), 56.69, 8);
+      draw(reference.slice(start, start + 65), 56.69, 8, false, false, true);
       y -= 13;
     }
     page.drawLine({
@@ -139,7 +164,7 @@ export async function statementPDF(statement: StatementSnapshot) {
   next();
   y -= 8;
   draw("Closing balance", 56.69, 11, true);
-  draw(statement.currency + " " + amount(balance), 425, 10, true);
+  figure(statement.currency + " " + amount(balance), 538.59, 180, true);
   for (const [i, p] of pdf.getPages().entries())
     p.drawText(
       `${statement.company.company.name} | Page ${i + 1} of ${pdf.getPageCount()}`,

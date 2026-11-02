@@ -176,9 +176,11 @@ test("signature exports carry exact-revision approval evidence in PDF DOCX and i
   };
   const unsigned = await financialExport(doc, settings, "pdf");
   const signed = await financialExport(doc, settings, "pdf", [approval]);
-  assert.equal(
-    (await PDFDocument.load(signed)).getPageCount(),
-    (await PDFDocument.load(unsigned)).getPageCount() + 1,
+  // Signatures remain in the document and have a separate proof page. The
+  // legal footer can move the in-document signature to a continuation page.
+  assert.ok(
+    (await PDFDocument.load(signed)).getPageCount() >=
+      (await PDFDocument.load(unsigned)).getPageCount() + 1,
   );
   const old = await financialExport(doc, settings, "pdf", [
     { ...approval, source_version: 1 },

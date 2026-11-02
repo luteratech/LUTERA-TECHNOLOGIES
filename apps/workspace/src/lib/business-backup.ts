@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
 import { encryptBackup, decryptBackup } from "./backup";
 
-export const BACKUP_FOLDER = "1W_idKvhJdpkaapikUcoErR_ErdUuKrVh";
+export const BACKUP_FOLDER = "1M5R-up413YeEzlRudOPObu2f258gkktD";
 const MAX_BYTES = 32 * 1024 * 1024;
 function connection() {
   const url = process.env.SUPABASE_URL,

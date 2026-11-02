@@ -20,12 +20,17 @@ company/recipient columns, ruled tables, blue-wash summaries, wrapped text,
 descriptions and quantities without presenting an amount payable. Actual prices,
 terms, identities and statuses continue to come from each authorised record.
 
-PDFs embed Sora with a bundled fallback for symbols. PNG text is outlined from
+PDFs embed Sora and JetBrains Mono (references/figures), with a bundled fallback
+for symbols. Bank/tax/legal details sit in the 7.5 pt footer; unprovided records
+are omitted. PNG text is outlined from
 the packaged fonts, so it does not depend on fonts installed on Vercel. Editable
 DOCX files name Sora and use the same palette and table hierarchy; a recipient's
-Word installation may substitute fonts if Sora is unavailable. Long PDF rows
+Word installation may substitute fonts if Sora or JetBrains Mono is unavailable. Long PDF rows
 continue over pages. Customer statements and electronic-approval pages use the
-same brand palette. Staff business cards now export at the specified 85 × 55 mm.
+same brand palette. Staff business cards export at 85 × 55 mm, Navy branded front and Paper details
+back, with 5 mm safe margins and optional 3 mm PDF bleed/crop marks. Portrait ID
+cards use Navy fronts/backs, the approved cropped symbol, a Paper photo panel
+and mono staff numbers at 54 × 86 mm.
 
 Existing financial arithmetic, approvals, source snapshots, access checks and
 manual-payment evidence requirements remain in force. Current authorised exports,

@@ -1,4 +1,5 @@
 "use client";
+import StatusBadge from "./StatusBadge";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, saveFile } from "@/lib/client";
 import { money } from "@/lib/contracts";
@@ -308,7 +309,9 @@ export function BusinessDashboard({ onOpen }: { onOpen?: () => void }) {
                       "overdue_minor",
                       "expenses_minor",
                     ].map((k) => (
-                      <td key={k}>{money(Number(r[k]), String(r.currency))}</td>
+                      <td className="numeric" key={k}>
+                        {money(Number(r[k]), String(r.currency))}
+                      </td>
                     ))}
                   </tr>
                 ))}
@@ -1595,7 +1598,13 @@ export default function BusinessWorkspace({
                 {rows.map((r) => (
                   <tr key={r.id || String(r.document_id)}>
                     <td>
-                      <strong>
+                      <strong
+                        className={
+                          r.number || r.reference || r.serial || r.sku
+                            ? "document-reference"
+                            : undefined
+                        }
+                      >
                         {String(
                           r.number ||
                             r.reference ||
@@ -1612,8 +1621,8 @@ export default function BusinessWorkspace({
                       </small>
                     </td>
                     <td>
-                      <span className="badge">
-                        {String(
+                      <StatusBadge
+                        status={String(
                           r.status ||
                             r.outcome ||
                             r.stage ||
@@ -1621,7 +1630,7 @@ export default function BusinessWorkspace({
                             r.location ||
                             "Recorded",
                         )}
-                      </span>
+                      />
                       {Boolean(r.assigned_to) && (
                         <small>
                           {config.people.find((p) => p.id === r.assigned_to)
@@ -1629,7 +1638,7 @@ export default function BusinessWorkspace({
                         </small>
                       )}
                     </td>
-                    <td>
+                    <td className="numeric">
                       {r.total_minor || r.amount_minor || r.value_minor
                         ? money(
                             Number(
@@ -1906,11 +1915,15 @@ function StockBalances() {
                 <td>{String(r.item_id)}</td>
                 <td>
                   {String(r.location)}
-                  <small>{String(r.serial)}</small>
+                  <small className="document-reference">
+                    {String(r.serial)}
+                  </small>
                 </td>
-                <td>{Number(r.on_hand)}</td>
-                <td>{Number(r.reserved)}</td>
-                <td>{Number(r.on_hand) - Number(r.reserved)}</td>
+                <td className="numeric">{Number(r.on_hand)}</td>
+                <td className="numeric">{Number(r.reserved)}</td>
+                <td className="numeric">
+                  {Number(r.on_hand) - Number(r.reserved)}
+                </td>
               </tr>
             ))}
           </tbody>

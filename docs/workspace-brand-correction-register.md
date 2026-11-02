@@ -13,13 +13,13 @@ scope, deferred tax records and desktop/tablet sidebar behaviour.
 | Roles | Persist multiple roles and enforce their combined access with current membership and MFA checks | Implemented; Owner selected alone, since it includes all authority |
 | Business access | Assign multiple departments and independently choose approval areas in one atomic save | Implemented; unselected departments unchanged |
 | Sensitive authority | Multiple journal-posting, period-closing and document-signing permissions | Implemented; each still needs underlying record access |
-| Form type and spacing | Align remaining labels/helper text, older gaps, borders and focus styles with the token scale | Remaining |
-| Status tags | Consistent pill shape, sentence case and approved semantic colours | Remaining |
-| Numeric typography | Load and apply JetBrains Mono to document references, serials, figures and totals | Remaining |
-| Invoice details | Align bank/tax placement and footer with the brand book while preserving record snapshots | Remaining |
-| Business cards | Navy branded front, Paper details back, correct logo lockup, safe margins and print bleed | Dimensions corrected; layout/print finish remaining |
-| ID cards | Navy front, tone-on-tone cropped symbol, Paper photo panel, white name and mono staff number | Remaining |
-| Component consistency | Review remaining older radii, shadows, table states and error messages across all modules | Remaining |
+| Form type and spacing | Align remaining labels/helper text, older gaps, borders and focus styles with the token scale | Implemented; verified in export and responsive browser checks |
+| Status tags | Consistent pill shape, sentence case and approved semantic colours | Implemented; verified in export and responsive browser checks |
+| Numeric typography | Load and apply JetBrains Mono to document references, serials, figures and totals | Implemented; verified in export and responsive browser checks |
+| Invoice details | Align bank/tax placement and footer with the brand book while preserving record snapshots | Implemented; verified in export and responsive browser checks |
+| Business cards | Navy branded front, Paper details back, correct logo lockup, safe margins and print bleed | Implemented: Navy/Paper front/back; 5 mm safe area, optional 3 mm bleed and crop marks |
+| ID cards | Navy front, tone-on-tone cropped symbol, Paper photo panel, white name and mono staff number | Implemented; verified in export and responsive browser checks |
+| Component consistency | Review remaining older radii, shadows, table states and error messages across all modules | Implemented; verified in export and responsive browser checks |
 
 ## Selection design and research
 
@@ -55,6 +55,29 @@ signing are another separate multi-selection. Company approval rules, fresh
 signature MFA and source-version checks remain in force.
 
 Open Design coordination is pending its independently registered local runtime
-connection. The Open Design skill was read, but no Open Design generation,
+connection. The user has the Windows app installed; this task runs in a separate
+Linux cloud environment. See [Windows connection steps](open-design-windows-connection.md). The Open Design skill was read, but no Open Design generation,
 design review or artifact delivery is claimed. This register and the code work
 continue under the user's direct implementation request.
+
+## Verification for the 2 November brand release
+
+- Approved favicon SVG reused unchanged; matching ICO and Apple icon generated
+  from it. File-based metadata and HTTP checks cover the served assets.
+- JetBrains Mono Regular/Medium packaged with their OFL and pinned provenance.
+  References and figures use it on screen and in PDF/PNG exports; Word names
+  the font, so recipient installations can still substitute it.
+- Bank/tax/RC appear in a measured 7.5 pt footer within the A4 margins. Pending
+  fields are omitted; issued company snapshots remain authoritative.
+- Business-card front/back and both ID sides use the approved assets. Trim and
+  bleed boxes are verified, and long printable fields fail visibly if they
+  cannot fit safely. Cards are images inside PDF/Word, not editable vector type.
+- Status labels retain words as well as semantic colour/dots; labels/helpers,
+  field borders, focus, table hover/focus and error surfaces share brand tokens.
+- 35 unit checks, strict types and production build passed. All five browser
+  suites passed, including responsive layouts, protected-route denials and
+  automated WCAG checks. Export review checked A4 text bounds and card palettes.
+  Production dependency audit reported zero vulnerabilities.
+
+These checks do not claim Open Design generated/reviewed the changes, nor do
+they constitute owner acceptance of financial data or statutory tax treatment.

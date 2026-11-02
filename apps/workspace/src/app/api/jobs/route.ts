@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { job, dispatchBusinessMail } from "@/lib/business-mail";
 import { runBusinessBackup } from "@/lib/business-backup";
+import { scheduledJobs } from "@/lib/scheduled-jobs";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 export async function GET(request: Request) {
@@ -14,15 +15,15 @@ export async function GET(request: Request) {
   )
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    await job({ action: "prepare" });
-    const messages = await dispatchBusinessMail();
-    const backup = await runBusinessBackup();
-    return Response.json(
-      { messages, backup },
-      {
-        headers: { "Cache-Control": "no-store" },
-      },
+    const result = await scheduledJobs(
+      () => job({ action: "prepare" }),
+      dispatchBusinessMail,
+      runBusinessBackup,
     );
+    return Response.json(result, {
+      status: result.ok ? 200 : 503,
+      headers: { "Cache-Control": "no-store" },
+    });
   } catch {
     return Response.json(
       { error: "Job processing failed. Inspect integration health." },

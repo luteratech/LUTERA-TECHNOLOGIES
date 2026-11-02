@@ -93,7 +93,8 @@ Default business dates and display timestamps use Africa/Lagos.
 
 ## Encrypted backups: Supabase, then Google Drive
 
-The scheduled job runs daily at **08:00 Africa/Lagos**. Its encrypted application
+The job is configured to run daily at **08:00 Africa/Lagos**. Configuration is
+not proof of execution: inspect the latest successful backup date and receipt. Its encrypted application
 snapshot includes business records, numbering counters, idempotency records and
 private evidence, staff photographs and account avatars. It uploads to the
 private **work-backups** Supabase bucket before recording a successful primary
@@ -101,14 +102,15 @@ copy. Failed copies remain visible in Operations settings. The worker never
 fabricates a staff session or MFA claim.
 
 Lutera's private Drive destination is:
-https://drive.google.com/drive/folders/1W_idKvhJdpkaapikUcoErR_ErdUuKrVh
+https://drive.google.com/drive/folders/1M5R-up413YeEzlRudOPObu2f258gkktD
 
-The encrypted pre-expansion snapshot was uploaded there and authenticated
-decryption was checked before migration. The first full primary snapshot was
-also uploaded to Supabase, copied to Drive, downloaded again, checked against
-its SHA-256 digest and successfully decrypted before its copy receipt was
-marked complete. There were no issued documents, staff
-records or private staff/avatar objects in the pre-expansion inventory.
+The folder is owned by **luteratech2@gmail.com**. On 2 November the 23 October
+encrypted application snapshot was copied from the earlier personal-account
+destination into this company folder, then downloaded and checked against its
+SHA-256 digest. The original copy and historical receipt were preserved.
+This is a verified historical copy, **not a fresh November snapshot**. The latest
+recorded primary snapshot at review was 23 October; the daily primary schedule
+must pass a fresh run before it can be relied on.
 
 **One-time company Google authorization is still required for daily Drive
 copies.** The chat's Google connector cannot supply an unattended Vercel identity.
@@ -116,10 +118,12 @@ A company-owned Apps Script provides this authorization without sharing the
 backup encryption key with Google or placing credentials in source code:
 
 1. Sign in through the existing private staff entry. Open **Operations settings**.
+   Select **Run backup now**, wait for a successful primary result and review its
+   date before proceeding. A failed run needs investigation; do not mark it done.
    Download **Drive connection** and **Recovery key**. Store the recovery key in
    the company password manager, separate from the backup folder. Do not post
    either file in chat or Git.
-2. In the same Google account that owns the backup folder, open
+2. Signed in as **luteratech2@gmail.com**, which owns the backup folder, open
    https://script.google.com and create a project named **Lutera backup copies**.
    Paste the code from [backup-drive.gs](backup-drive.gs).
 3. Under Project settings → Script properties, add `LUTERA_BACKUP_URL` and
@@ -133,6 +137,12 @@ backup encryption key with Google or placing credentials in source code:
    settings shows a **complete** backup with its Drive receipt. A **primary**
    status means the off-site copy is still outstanding. Failure emails from Apps
    Script go to its owning Google account; also review workspace backup health.
+
+The reminder/mail and primary-backup tasks run independently; failure of message
+preparation or delivery cannot prevent a backup attempt. Failures return a
+non-success job result without exposing provider details. This prevents a code
+dependency from suppressing backups, but does not by itself verify Vercel cron
+execution.
 
 The copy process checks SHA-256 before and after writing Drive, reuses the exact
 backup filename on retries and acknowledges only a matching snapshot digest.

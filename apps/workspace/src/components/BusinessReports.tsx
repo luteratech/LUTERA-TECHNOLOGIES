@@ -77,10 +77,14 @@ export default function BusinessReports() {
                 <tbody>
                   {(data[section] || []).map((r, i) => (
                     <tr key={r.id || i}>
-                      <td>{String(r.number || r.title || r.category || "")}</td>
+                      <td
+                        className={r.number ? "document-reference" : undefined}
+                      >
+                        {String(r.number || r.title || r.category || "")}
+                      </td>
                       <td>{String(r.customer || r.supplier || "")}</td>
                       <td>{String(r.currency)}</td>
-                      <td>
+                      <td className="numeric">
                         {money(
                           Number(
                             r.outstanding_minor ??
@@ -91,7 +95,7 @@ export default function BusinessReports() {
                           String(r.currency),
                         )}
                       </td>
-                      <td>
+                      <td className="numeric">
                         {section === "orders"
                           ? money(
                               Number(r.invoiced_minor) -

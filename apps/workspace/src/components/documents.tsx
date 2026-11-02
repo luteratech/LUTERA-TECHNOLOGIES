@@ -1,4 +1,5 @@
 "use client";
+import StatusBadge from "./StatusBadge";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   documentSchema,
@@ -250,17 +251,15 @@ export default function Documents({
                 {shown.map((doc) => (
                   <tr key={doc.id}>
                     <td>
-                      <strong>{doc.number || "Unnumbered draft"}</strong>
+                      <strong className="document-reference">{doc.number || "Unnumbered draft"}</strong>
                       <small>
                         {doc.kind} · {doc.payload.date}
                       </small>
                     </td>
                     <td>{doc.payload.customer.name}</td>
-                    <td>{money(doc.total_minor, doc.payload.currency)}</td>
+                    <td className="numeric">{money(doc.total_minor, doc.payload.currency)}</td>
                     <td>
-                      <span className={`badge ${doc.status}`}>
-                        {doc.status}
-                      </span>
+                      <StatusBadge status={doc.status} />
                     </td>
                     <td>
                       <button
@@ -481,7 +480,7 @@ export function Editor({
           <h2>{record?.number || (record ? "Saved draft" : "New draft")}</h2>
         </div>
         {record && (
-          <span className={`badge ${record.status}`}>{record.status}</span>
+          <StatusBadge status={record.status} />
         )}
       </div>
       <form className="panel" onSubmit={save}>

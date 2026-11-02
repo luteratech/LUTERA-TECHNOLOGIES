@@ -68,6 +68,8 @@ with sync_playwright() as p:
  page.get_by_role('button',name='Save owner settings',exact=True).wait_for()
  assert page.locator('#workspace-navigation').evaluate("el=>getComputedStyle(el).backgroundColor")=='rgb(46, 91, 255)'
  assert page.locator('#workspace-main input[type=checkbox]').count()==3
+ assert page.get_by_label('Accounting start date',exact=True).evaluate('el=>getComputedStyle(el).fontSize')=='16px'
+ assert page.locator('.field > span').first.evaluate('el=>getComputedStyle(el).fontSize')=='14px'
  for viewport in [1280,768,390]:
   page.set_viewport_size({'width':viewport,'height':1000})
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),viewport

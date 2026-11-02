@@ -10,4 +10,7 @@ export const lutera = {
   border: "#D3D4DC",
   wash: "#EEF2FF",
   white: "#FFFFFF",
+  danger: "#C42F2F",
+  success: "#157A4F",
+  warning: "#A15C00",
 } as const;

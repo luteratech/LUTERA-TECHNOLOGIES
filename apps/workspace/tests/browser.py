@@ -61,6 +61,9 @@ with sync_playwright() as p:
  assert context.request.get(origin+'/api/state').status==401
  assert context.request.post(origin+'/api/documents/save',data={},headers={'Origin':'https://evil.example','Content-Type':'application/json'}).status==403
  assert context.request.get(origin+'/robots.txt').text().find('Disallow: /')>=0
+ assert context.request.get(origin+'/icon.svg').body()==(root/'public/brand/lutera-favicon.svg').read_bytes()
+ assert context.request.get(origin+'/favicon.ico').status==200
+ assert context.request.get(origin+'/apple-icon.png').status==200
  response=page.goto(origin+'/'+entry);assert response.status==200
  assert 'noindex' in response.headers.get('x-robots-tag','')
  assert "frame-ancestors 'none'" in response.headers.get('content-security-policy','')
@@ -125,10 +128,27 @@ with sync_playwright() as p:
  page.get_by_role('button',name='Save staff profile').click()
  page.get_by_role('heading',name='Sample Profile',level=2,exact=True).wait_for()
  page.get_by_label('Template').select_option('id')
+ assert page.locator('.card-preview.id').evaluate('el=>getComputedStyle(el).backgroundColor')=='rgb(22, 26, 61)'
+ assert 'JetBrains Mono' in page.locator('.card-staff-id').evaluate('el=>getComputedStyle(el).fontFamily')
+ for viewport in [390,768,1280]:
+  page.set_viewport_size({'width':viewport,'height':900})
+  assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),viewport
+  page.screenshot(path=str(resultdir/f'brand-id-front-{viewport}.png'),full_page=True)
+ page.set_viewport_size({'width':1440,'height':1000})
  page.screenshot(path=str(resultdir/'staff-desktop.png'),full_page=True)
  accessibility('staff')
  page.get_by_label('Side').select_option('back')
  accessibility('staff-back')
+ assert page.locator('.card-preview.id.back').evaluate('el=>getComputedStyle(el).backgroundColor')=='rgb(22, 26, 61)'
+ page.get_by_label('Template').select_option('name')
+ assert page.locator('.card-preview.name.back').evaluate('el=>getComputedStyle(el).backgroundColor')=='rgb(243, 242, 238)'
+ accessibility('business-card-back')
+ page.screenshot(path=str(resultdir/'brand-name-back.png'),full_page=True)
+ page.get_by_label('Side').select_option('front')
+ assert page.locator('.card-preview.name.front').evaluate('el=>getComputedStyle(el).backgroundColor')=='rgb(22, 26, 61)'
+ page.get_by_label('Include 3 mm print bleed and crop marks in PDF').check()
+ page.get_by_label('Template').select_option('id')
+ page.get_by_label('Side').select_option('back')
  page.screenshot(path=str(resultdir/'staff-back-desktop.png'),full_page=True)
  page.get_by_label('Side').select_option('front')
  page.locator('#workspace-navigation').get_by_role('button',name='Website cPanel',exact=True).click()

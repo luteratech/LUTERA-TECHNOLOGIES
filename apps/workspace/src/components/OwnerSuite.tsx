@@ -560,8 +560,8 @@ function Approvals({ config }: { config: SuiteConfig }) {
                     ).map((l, i) => (
                       <tr key={i}>
                         <td>{l.description}</td>
-                        <td>{l.quantity}</td>
-                        <td>
+                        <td className="numeric">{l.quantity}</td>
+                        <td className="numeric">
                           {money(
                             l.unit_minor,
                             String(
@@ -914,8 +914,12 @@ function Accounting({
                         {l.account} ·{" "}
                         {accounts.find((a) => a.code === l.account)?.name}
                       </td>
-                      <td>{money(l.debit_minor, j.currency)}</td>
-                      <td>{money(l.credit_minor, j.currency)}</td>
+                      <td className="numeric">
+                        {money(l.debit_minor, j.currency)}
+                      </td>
+                      <td className="numeric">
+                        {money(l.credit_minor, j.currency)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1258,7 +1262,7 @@ function Accounts({
           <tbody>
             {accounts.map((a) => (
               <tr key={a.code}>
-                <td>{a.code}</td>
+                <td className="document-reference">{a.code}</td>
                 <td>
                   {a.name}
                   {a.cash_account ? " · Cash/bank" : ""}
@@ -1542,34 +1546,34 @@ function Reports() {
           <dl className="record-summary">
             <div>
               <dt>Income</dt>
-              <dd>{money(s.revenue, currency)}</dd>
+              <dd className="numeric">{money(s.revenue, currency)}</dd>
             </div>
             <div>
               <dt>Expenses</dt>
-              <dd>{money(s.expenses, currency)}</dd>
+              <dd className="numeric">{money(s.expenses, currency)}</dd>
             </div>
             <div>
               <dt>Profit / loss</dt>
-              <dd>{money(s.profit, currency)}</dd>
+              <dd className="numeric">{money(s.profit, currency)}</dd>
             </div>
           </dl>
           <h4>Balance sheet</h4>
           <dl className="record-summary">
             <div>
               <dt>Assets</dt>
-              <dd>{money(s.assets, currency)}</dd>
+              <dd className="numeric">{money(s.assets, currency)}</dd>
             </div>
             <div>
               <dt>Liabilities</dt>
-              <dd>{money(s.liabilities, currency)}</dd>
+              <dd className="numeric">{money(s.liabilities, currency)}</dd>
             </div>
             <div>
               <dt>Equity before unclosed earnings</dt>
-              <dd>{money(s.equity, currency)}</dd>
+              <dd className="numeric">{money(s.equity, currency)}</dd>
             </div>
             <div>
               <dt>Unclosed earnings</dt>
-              <dd>{money(s.earnings, currency)}</dd>
+              <dd className="numeric">{money(s.earnings, currency)}</dd>
             </div>
           </dl>
           <h4>Trial balance</h4>
@@ -1588,12 +1592,13 @@ function Reports() {
                   .map((b) => (
                     <tr key={b.code}>
                       <td>
-                        {b.code} · {b.name}
+                        <span className="document-reference">{b.code}</span> ·{" "}
+                        {b.name}
                       </td>
-                      <td>
+                      <td className="numeric">
                         {money(Math.max(0, Number(b.balance_minor)), currency)}
                       </td>
-                      <td>
+                      <td className="numeric">
                         {money(Math.max(0, -Number(b.balance_minor)), currency)}
                       </td>
                     </tr>
@@ -1646,12 +1651,19 @@ function Reports() {
                   .map((a, i) => (
                     <tr key={i}>
                       <td>
-                        {a.entry_date} · {a.reference}
+                        {a.entry_date} ·{" "}
+                        <span className="document-reference">
+                          {a.reference}
+                        </span>
                         <small>{a.description}</small>
                       </td>
-                      <td>{a.account}</td>
-                      <td>{money(Number(a.debit_minor), currency)}</td>
-                      <td>{money(Number(a.credit_minor), currency)}</td>
+                      <td className="document-reference">{a.account}</td>
+                      <td className="numeric">
+                        {money(Number(a.debit_minor), currency)}
+                      </td>
+                      <td className="numeric">
+                        {money(Number(a.credit_minor), currency)}
+                      </td>
                     </tr>
                   ))}
               </tbody>

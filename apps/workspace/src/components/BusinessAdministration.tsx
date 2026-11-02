@@ -153,13 +153,14 @@ export default function BusinessAdministration() {
       <details className="ops-gap">
         <summary>Backup and accounting arrangements</summary>
         <p>
-          Daily encrypted backups are stored in a private Supabase bucket.
-          Google Drive copies run after company Google background authorization
-          is configured. A primary copy remains available if the Drive copy
-          fails. Backups are retained until Lutera approves its retention
-          policy; no automatic deletion is enabled. Download the recovery key
-          and keep it in the company password manager, separate from the backup
-          files.
+          Encrypted backups are scheduled daily to a private Supabase bucket.
+          Check the latest successful backup date in Operations health before
+          relying on the schedule. Google Drive copies run after company Google
+          background authorization is configured. A primary copy remains
+          available if the Drive copy fails. Backups are retained until Lutera
+          approves its retention policy; no automatic deletion is enabled.
+          Download the recovery key and keep it in the company password manager,
+          separate from the backup files.
         </p>
         <div className="actions">
           <button
@@ -167,8 +168,15 @@ export default function BusinessAdministration() {
             onClick={async () => {
               setBusy(true);
               try {
-                const r = await api("business/backup-run", { confirmed: true });
-                setMessage(JSON.stringify(r));
+                const r = await api<{ configured: boolean }>(
+                  "business/backup-run",
+                  { confirmed: true },
+                );
+                setMessage(
+                  r.configured
+                    ? "Backup check completed. Review the latest primary copy and Drive status in Operations health."
+                    : "Backup encryption is not configured. Complete the company backup setup before relying on scheduled copies.",
+                );
                 await load();
               } catch (e) {
                 setMessage((e as Error).message);
@@ -210,7 +218,7 @@ export default function BusinessAdministration() {
             Download Drive connection
           </button>
           <a
-            href="https://drive.google.com/drive/folders/1W_idKvhJdpkaapikUcoErR_ErdUuKrVh"
+            href="https://drive.google.com/drive/folders/1M5R-up413YeEzlRudOPObu2f258gkktD"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -218,10 +226,10 @@ export default function BusinessAdministration() {
           </a>
         </div>
         <p>
-          Accountant CSV exports are the current accounting handoff. No payment
-          gateway is connected. Staff record confirmed payments manually and
-          upload evidence. CSV export amounts use the named currency and integer
-          minor-unit columns; reconciliation remains an accountant review.
+          Finance includes the company ledger and accountant CSV exports. The
+          owner reviews opening balances and reconciliation while handling the
+          accounts. Payments are recorded manually with uploaded evidence.
+          Export amounts use their named currency and integer minor units.
         </p>
       </details>
     </section>
