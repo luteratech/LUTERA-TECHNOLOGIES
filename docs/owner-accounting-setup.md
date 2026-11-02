@@ -28,7 +28,10 @@ initially; membership roles, department approval grants and signing authority
 can be delegated separately when staff are added. No thresholds are invented.
 
 Privileged setup changes use a clearly marked database-management audit actor,
-not an invented staff/MFA session. Application roles still pass the existing
+not an invented staff/MFA session. Sensitive bank/tax/currency management changes
+require the real `postgres` connection identity, no selected application role and
+no staff JWT. A SECURITY DEFINER's effective user alone grants no such authority.
+Every such management change writes its own system audit record. Application roles still pass the existing
 membership, MFA and row-level access checks. Calendar validation applies to
 both the application API and direct setup RPCs. Read-only capabilities expose
 only the nonsensitive reporting calendar, not company tax or bank details.
