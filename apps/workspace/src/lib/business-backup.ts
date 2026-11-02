@@ -2,6 +2,7 @@ import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
 import { encryptBackup, decryptBackup } from "./backup";
+import { BACKUP_SCHEDULE, nextScheduledBackup } from "./backup-schedule";
 
 export const BACKUP_FOLDER = "1M5R-up413YeEzlRudOPObu2f258gkktD";
 const MAX_BYTES = 32 * 1024 * 1024;
@@ -27,6 +28,21 @@ async function control(c: Record<string, unknown>) {
 export function backupConfiguration() {
   return {
     encrypted_primary_backup: !!process.env.BACKUP_PASSPHRASE,
+    automatic_primary_backup_configured: !!(
+      process.env.BACKUP_PASSPHRASE &&
+      process.env.CRON_SECRET &&
+      process.env.BUSINESS_JOB_SECRET &&
+      process.env.SUPABASE_URL &&
+      process.env.SUPABASE_PUBLISHABLE_KEY
+    ),
+    primary_backup_schedule: BACKUP_SCHEDULE,
+    next_scheduled_primary_backup: new Date(
+      nextScheduledBackup(),
+    ).toLocaleString("en-NG", {
+      timeZone: "Africa/Lagos",
+      dateStyle: "medium",
+      timeStyle: "short",
+    }),
     google_drive_automation:
       "Requires company Apps Script authorization; inspect the latest copy receipt",
     drive_copy_connection: !!process.env.DRIVE_BACKUP_SECRET,

@@ -1,43 +1,82 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { scheduledJobs } from "../src/lib/scheduled-jobs";
-
-test("backup runs even if reminder preparation fails, and errors do not expose provider details", async () => {
+import { readFile } from "node:fs/promises";
+import { scheduledJobs, scheduledBackup } from "../src/lib/scheduled-jobs";
+import { BACKUP_CRON, nextScheduledBackup } from "../src/lib/backup-schedule";
+import { authorizedCron } from "../src/lib/cron-auth";
+test("weekly backup and daily reminder failures are isolated and never expose provider details", async () => {
   let copied = 0,
     sent = 0;
-  const result = await scheduledJobs(
-    async () => {
-      throw new Error("private provider details");
-    },
-    async () => {
-      sent++;
-    },
-    async () => {
+  const [messages, backup] = await Promise.all([
+    scheduledJobs(
+      async () => {
+        throw new Error("private provider details");
+      },
+      async () => {
+        sent++;
+      },
+    ),
+    scheduledBackup(async () => {
       copied++;
-      return { primary_created: true };
-    },
-  );
+      return { configured: true, primary_created: true };
+    }),
+  ]);
   assert.equal(copied, 1);
   assert.equal(sent, 0);
-  assert.equal(result.ok, false);
-  assert.deepEqual(result.backup, { primary_created: true });
-  assert.ok(!JSON.stringify(result).includes("private provider details"));
+  assert.equal(messages.ok, false);
+  assert.equal(backup.ok, true);
+  assert.ok(!JSON.stringify(messages).includes("private provider details"));
+  const [successfulMessages, failedBackup] = await Promise.all([
+    scheduledJobs(
+      async () => {},
+      async () => ({ sent: 2 }),
+    ),
+    scheduledBackup(async () => {
+      throw new Error("private backup details");
+    }),
+  ]);
+  assert.equal(successfulMessages.ok, true);
+  assert.equal(failedBackup.ok, false);
+  assert.ok(!JSON.stringify(failedBackup).includes("private backup details"));
+  assert.equal(
+    (await scheduledBackup(async () => ({ configured: false }))).ok,
+    false,
+  );
 });
-
-test("backup failure preserves the successful message result and a later run can succeed", async () => {
-  const result = await scheduledJobs(
-    async () => {},
-    async () => ({ sent: 2 }),
-    async () => {
-      throw new Error("private");
-    },
+test("weekly backups use a separate seven-day cron without slowing daily reminders", async () => {
+  const config = JSON.parse(await readFile("vercel.json", "utf8"));
+  assert.deepEqual(config.crons, [
+    { path: "/api/jobs", schedule: "0 7 * * *" },
+    { path: "/api/jobs/backup", schedule: BACKUP_CRON },
+  ]);
+  assert.equal(BACKUP_CRON, "0 7 * * 1");
+  assert.equal(
+    nextScheduledBackup(new Date("2026-11-02T06:59:59Z")),
+    "2026-11-02T07:00:00.000Z",
   );
-  assert.equal(result.ok, false);
-  assert.deepEqual(result.messages, { sent: 2 });
-  const retry = await scheduledJobs(
-    async () => {},
-    async () => ({ sent: 0 }),
-    async () => ({ configured: true }),
+  assert.equal(
+    nextScheduledBackup(new Date("2026-11-02T07:00:00Z")),
+    "2026-11-09T07:00:00.000Z",
   );
-  assert.equal(retry.ok, true);
+  assert.equal(
+    nextScheduledBackup(new Date("2026-12-28T07:00:00Z")),
+    "2027-01-04T07:00:00.000Z",
+  );
+  const first = nextScheduledBackup(new Date("2028-02-28T07:00:00Z"));
+  const next = nextScheduledBackup(new Date(first));
+  assert.equal(
+    new Date(next).getTime() - new Date(first).getTime(),
+    7 * 24 * 60 * 60 * 1000,
+  );
+});
+test("both cron handlers require the exact secret and reject missing or malformed authorization", () => {
+  const secret = "SYNTHETIC-CRON-FIXTURE";
+  const request = (header?: string) =>
+    new Request("https://example.invalid/api/jobs/backup", {
+      headers: header ? { authorization: header } : {},
+    });
+  assert.equal(authorizedCron(request(), secret), false);
+  assert.equal(authorizedCron(request("Bearer wrong"), secret), false);
+  assert.equal(authorizedCron(request("Bearer " + secret), ""), false);
+  assert.equal(authorizedCron(request("Bearer " + secret), secret), true);
 });

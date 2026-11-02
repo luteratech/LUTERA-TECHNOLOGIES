@@ -38,5 +38,5 @@ function copyLuteraBackups() {
 function installLuteraBackup() {
   copyLuteraBackups();
   ScriptApp.getProjectTriggers().filter(t=>t.getHandlerFunction()==='copyLuteraBackups').forEach(t=>ScriptApp.deleteTrigger(t));
-  ScriptApp.newTrigger('copyLuteraBackups').timeBased().everyDays(1).atHour(9).inTimezone('Africa/Lagos').create();
+  ScriptApp.newTrigger('copyLuteraBackups').timeBased().everyWeeks(1).onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(10).inTimezone('Africa/Lagos').create();
 }

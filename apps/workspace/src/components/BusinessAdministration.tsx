@@ -157,15 +157,51 @@ export default function BusinessAdministration() {
       <details className="ops-gap">
         <summary>Backup and accounting arrangements</summary>
         <p>
-          Encrypted backups are scheduled daily to a private Supabase bucket.
-          Check the latest successful backup date in Operations health before
-          relying on the schedule. Google Drive copies run after company Google
-          background authorization is configured. A primary copy remains
-          available if the Drive copy fails. Backups are retained until Lutera
-          approves its retention policy; no automatic deletion is enabled.
-          Download the recovery key and keep it in the company password manager,
-          separate from the backup files.
+          Encrypted backups are scheduled every 7 days: Monday at 08:00
+          Africa/Lagos, to a private Supabase bucket. Check the latest
+          successful backup date in Operations health before relying on the
+          schedule. Google Drive copies run after company Google background
+          authorization is configured. A primary copy remains available if the
+          Drive copy fails. Backups are retained until Lutera approves its
+          retention policy; no automatic deletion is enabled. Download the
+          recovery key and keep it in the company password manager, separate
+          from the backup files.
         </p>
+        <details className="ops-gap">
+          <summary>What is included in the backup?</summary>
+          <ul>
+            <li>
+              Customers, suppliers, enquiries, quotations, invoices, receipts,
+              purchases and manual payment records.
+            </li>
+            <li>
+              Accounting journals, chart of accounts, opening setup, period
+              controls, bank matching, approvals and signatures.
+            </li>
+            <li>
+              Stock, deliveries, assets, projects, tasks, support and
+              maintenance records.
+            </li>
+            <li>
+              Saved website content and drafts; staff profiles, workspace roles,
+              permissions, company settings and audit history.
+            </li>
+            <li>
+              Uploaded evidence, staff photos, profile avatars and
+              customer-portal evidence in the four private file buckets.
+            </li>
+            <li>
+              Document numbering and request history needed to prevent duplicate
+              processing.
+            </li>
+          </ul>
+          <p>
+            Only saved data is included. Auth passwords, MFA secrets, login
+            sessions, hosting credentials and unsaved edits are excluded. Source
+            code, logos and templates remain versioned in GitHub; provider-level
+            database/Auth recovery is separate.
+          </p>
+        </details>
         <div className="actions">
           <button
             disabled={busy || backupBusy}

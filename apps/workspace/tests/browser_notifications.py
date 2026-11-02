@@ -34,6 +34,8 @@ with sync_playwright() as p:
  c.route('**/api/**',fixture);page.goto(origin+'/'+entry+'?section=business-settings')
  page.get_by_role('heading',name='Business operations settings',exact=True).wait_for()
  page.get_by_text('Backup and accounting arrangements',exact=True).click()
+ page.get_by_text('What is included in the backup?',exact=True).click()
+ page.get_by_text('Auth passwords, MFA secrets',exact=False).wait_for()
  button=page.get_by_role('button',name='Run backup now',exact=True);button.click()
  region=page.get_by_role('region',name='Workspace notifications',exact=True)
  region.get_by_text('Creating backup',exact=True).wait_for();expect(page.get_by_role('button',name='Creating backup…',exact=True)).to_be_disabled()

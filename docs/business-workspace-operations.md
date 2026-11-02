@@ -93,7 +93,8 @@ Default business dates and display timestamps use Africa/Lagos.
 
 ## Encrypted backups: Supabase, then Google Drive
 
-The job is configured to run daily at **08:00 Africa/Lagos**. Configuration is
+The backup job is configured to run **every Monday at 08:00 Africa/Lagos**
+(every 7 days), independently of daily reminders. Configuration is
 not proof of execution: inspect the latest successful backup date and receipt. Its encrypted application
 snapshot includes business records, numbering counters, idempotency records and
 private evidence, staff photographs and account avatars. It uploads to the
@@ -111,10 +112,10 @@ SHA-256 digest. The original copy and historical receipt were preserved.
 This is a verified historical copy, **not a fresh November snapshot**. The latest
 recorded primary snapshot at the earlier review was 23 October. The owner
 subsequently ran a successful manual primary backup on **2 November at
-15:20 UTC**; its Drive receipt is pending. Unattended daily execution still
+15:20 UTC**; its Drive receipt is pending. Unattended weekly execution still
 requires a successful scheduled run.
 
-**One-time company Google authorization is still required for daily Drive
+**One-time company Google authorization is still required for weekly Drive
 copies.** The chat's Google connector cannot supply an unattended Vercel identity.
 A company-owned Apps Script provides this authorization without sharing the
 backup encryption key with Google or placing credentials in source code:
@@ -133,14 +134,14 @@ backup encryption key with Google or placing credentials in source code:
    the script source and execution logs.
 4. Select **installLuteraBackup**, run it and approve Google's Drive and external
    request permissions. This copies outstanding primary snapshots and installs a
-   daily trigger around **09:00 Africa/Lagos**. Google may require an owner review
+   weekly Monday trigger around **10:00 Africa/Lagos**. Google may require an owner review
    of the private script before granting these permissions.
 5. Confirm the encrypted file exists in the company folder and that Operations
    settings shows a **complete** backup with its Drive receipt. A **primary**
    status means the off-site copy is still outstanding. Failure emails from Apps
    Script go to its owning Google account; also review workspace backup health.
 
-The reminder/mail and primary-backup tasks run independently; failure of message
+Daily reminder/mail processing and weekly primary backups use separate cron routes; failure of message
 preparation or delivery cannot prevent a backup attempt. Failures return a
 non-success job result without exposing provider details. This prevents a code
 dependency from suppressing backups, but does not by itself verify Vercel cron
@@ -241,3 +242,5 @@ record restoration and unsaved-change guards remain supported.
   enabled.
 - Agree backup/evidence retention with the owner/accountant. No third-party
   accounting synchronization, payment gateway, payroll or bank transfer is added.
+
+The current schedule and full inclusion/exclusion list are documented in [backup-coverage.md](backup-coverage.md). An already installed older daily Drive trigger must be replaced by running the updated installLuteraBackup once.

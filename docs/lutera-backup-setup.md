@@ -1,4 +1,4 @@
-# Activate Lutera's daily Drive backup copies
+# Activate Lutera's weekly Drive backup copies
 
 Use **luteratech2@gmail.com** throughout. The private company backup folder is:
 https://drive.google.com/drive/folders/1M5R-up413YeEzlRudOPObu2f258gkktD
@@ -6,7 +6,7 @@ https://drive.google.com/drive/folders/1M5R-up413YeEzlRudOPObu2f258gkktD
 The encrypted 23 October snapshot has been copied to this folder and its
 SHA-256 verified after download. A new manual primary backup succeeded on
 **2 November 2026 at 15:20 UTC** in Supabase; its Drive copy is still pending.
-This does not verify unattended daily execution. Supabase remains primary.
+This does not verify unattended weekly execution. Supabase remains primary.
 
 1. In the private Lutera workspace, open **Operations settings**. Choose
    **Run backup now** and review the result and latest primary backup date.
@@ -24,13 +24,13 @@ This does not verify unattended daily execution. Supabase remains primary.
 6. Select **installLuteraBackup**, run once and approve the requested Google
    Drive/external-request permissions with the company account. Do not approve
    an unfamiliar app or a different script. This copies pending encrypted files
-   and installs the daily copy trigger around **09:00 Africa/Lagos**.
+   and installs the weekly Monday copy trigger around **10:00 Africa/Lagos**.
 7. Check Apps Script → Triggers and Executions. Confirm a new encrypted file is
    in the company folder and **Operations settings** has a matching complete
-   backup/Drive receipt. Verify the following scheduled day as well. A primary
+   backup/Drive receipt. Verify the following scheduled Monday as well. A primary
    status alone means the Drive copy remains outstanding.
 
-Primary snapshots are scheduled at **08:00 Africa/Lagos**. Reminder-email
+Primary snapshots are scheduled **every Monday at 08:00 Africa/Lagos**. Reminder-email
 failure no longer suppresses the independent primary backup attempt. Both
 schedules still require actual successful execution and freshness checks.
 
@@ -43,3 +43,5 @@ execution identity; the one-time company-account authorization is still needed.
 A successful copy is not a disaster-recovery drill. See
 `docs/business-workspace-operations.md` for coverage, limits and isolated restore
 steps. Application snapshots do not include Auth passwords/MFA/provider secrets.
+
+The current schedule and full inclusion/exclusion list are documented in [the coverage guide](https://github.com/luteratech/LUTERA-TECHNOLOGIES/blob/main/docs/backup-coverage.md). An already installed older daily Drive trigger must be replaced by running the updated installLuteraBackup once.

@@ -64,7 +64,7 @@ def go(page,department,tool=None):
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path=shutil.which('chromium') or None,headless=True,args=['--no-sandbox'])
  c=b.new_context(viewport={'width':1280,'height':1000});page=c.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
- for path in ['/api/operations/list?entity=locations','/api/business/config','/api/business/health','/api/business/file?id='+cid,'/api/portal/session','/api/backups/drive','/api/jobs']:
+ for path in ['/api/operations/list?entity=locations','/api/business/config','/api/business/health','/api/business/file?id='+cid,'/api/portal/session','/api/backups/drive','/api/jobs','/api/jobs/backup']:
   assert c.request.get(origin+path).status==401,path
  assert c.request.post(origin+'/api/business/payment',data={},headers={'Origin':'https://evil.example'}).status==403
  assert c.request.post(origin+'/api/portal/ticket',data={},headers={'Origin':'https://evil.example'}).status==400
