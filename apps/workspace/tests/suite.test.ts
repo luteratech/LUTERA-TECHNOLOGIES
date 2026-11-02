@@ -7,6 +7,7 @@ import {
   emptyOwnerSetup,
   journalSchema,
   reportSummary,
+  accountingPeriod,
 } from "../src/lib/suite";
 import { financialExport } from "../src/lib/exports";
 import type { BusinessDocument, Settings } from "../src/lib/contracts";
@@ -197,4 +198,44 @@ test("signature exports carry exact-revision approval evidence in PDF DOCX and i
   );
   const word = await financialExport(doc, settings, "docx", [approval]);
   assert.equal(word.subarray(0, 2).toString(), "PK");
+});
+
+test("fiscal periods respect the first cutover and annual rollover without closing books", () => {
+  assert.deepEqual(accountingPeriod("2026-11-02", "2026-10-15"), {
+    from: "2026-10-15",
+    through: "2026-12-31",
+  });
+  assert.deepEqual(accountingPeriod("2026-12-31", "2026-10-15"), {
+    from: "2026-10-15",
+    through: "2026-12-31",
+  });
+  assert.deepEqual(accountingPeriod("2027-01-01", "2026-10-15"), {
+    from: "2027-01-01",
+    through: "2027-12-31",
+  });
+  assert.deepEqual(accountingPeriod("2028-02-29", "2026-10-15"), {
+    from: "2028-01-01",
+    through: "2028-12-31",
+  });
+  assert.deepEqual(accountingPeriod("2027-07-01", "2026-10-15", "06-30"), {
+    from: "2027-07-01",
+    through: "2028-06-30",
+  });
+  assert.equal(accountingPeriod("2026-10-14", "2026-10-15"), null);
+  assert.equal(accountingPeriod("2026-11-02", "2026-10-15", "02-30"), null);
+  for (const year_end of ["02-30", "02-29", "13-01", "12-32", "01-00"])
+    assert.equal(
+      ownerSetupSchema.safeParse({
+        ...emptyOwnerSetup,
+        accounting: { ...emptyOwnerSetup.accounting, year_end },
+      }).success,
+      false,
+    );
+  const original = ownerSetupSchema.parse({
+    tax: emptyOwnerSetup.tax,
+    accounting: { enabled: false, cutover: "", opening_reviewed: false },
+    solo_owner: true,
+  });
+  assert.equal(original.accounting.year_end, "12-31");
+  assert.equal(original.commercial.payment_terms, "per_transaction");
 });

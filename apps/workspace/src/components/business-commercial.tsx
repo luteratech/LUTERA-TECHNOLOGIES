@@ -26,7 +26,7 @@ const heads: FieldDef[] = [
   field("currency", "Currency", "select", true, ["NGN", "USD", "GBP", "EUR"]),
   field("discount", "Discount amount", "money"),
   field("tax", "Tax percentage", "number"),
-  field("notes", "Agreed terms / notes", "textarea"),
+  field("notes", "Agreed payment terms / notes", "textarea"),
 ];
 type Line = {
   id?: string;

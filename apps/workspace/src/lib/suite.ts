@@ -1,5 +1,25 @@
 import { z } from "zod";
 const date = z.union([z.literal(""), z.iso.date()]);
+const fiscalYearEndSchema = z
+  .string()
+  .regex(/^\d{2}-\d{2}$/)
+  .refine((value) => {
+    const [month, day] = value.split("-").map(Number);
+    const d = new Date(Date.UTC(2001, month - 1, day));
+    return d.getUTCMonth() === month - 1 && d.getUTCDate() === day;
+  }, "Choose a valid annual year-end, for example 12-31.");
+export const openingPositionSchema = z
+  .object({
+    currency: z.literal("NGN"),
+    total_minor: z.literal(0),
+    no_receivables: z.literal(true),
+    no_payables: z.literal(true),
+    no_deposits: z.literal(true),
+    no_loans: z.literal(true),
+    no_stock: z.literal(true),
+    no_fixed_assets: z.literal(true),
+  })
+  .strict();
 export const ownerSetupSchema = z
   .object({
     tax: z
@@ -23,9 +43,23 @@ export const ownerSetupSchema = z
         enabled: z.boolean(),
         cutover: date,
         opening_reviewed: z.boolean(),
+        year_end: fiscalYearEndSchema.default("12-31"),
+        opening_position: openingPositionSchema.optional(),
       })
       .strict(),
     solo_owner: z.boolean(),
+    commercial: z
+      .object({
+        payment_terms: z.literal("per_transaction"),
+        numbering: z.literal("existing_sequences"),
+        approvals: z.literal("owner_then_delegates"),
+      })
+      .strict()
+      .default({
+        payment_terms: "per_transaction",
+        numbering: "existing_sequences",
+        approvals: "owner_then_delegates",
+      }),
   })
   .strict();
 export type OwnerSetup = z.infer<typeof ownerSetupSchema>;
@@ -39,8 +73,18 @@ export const emptyOwnerSetup: OwnerSetup = {
     reference: "",
     notes: "",
   },
-  accounting: { enabled: false, cutover: "", opening_reviewed: false },
+  accounting: {
+    enabled: false,
+    cutover: "",
+    opening_reviewed: false,
+    year_end: "12-31",
+  },
   solo_owner: true,
+  commercial: {
+    payment_terms: "per_transaction",
+    numbering: "existing_sequences",
+    approvals: "owner_then_delegates",
+  },
 };
 export const signatureProfileSchema = z
   .object({
@@ -107,6 +151,8 @@ export type SuiteConfig = {
   sign: boolean;
   setup?: { payload: OwnerSetup; version: number };
   accounting_enabled: boolean;
+  accounting_start?: string;
+  financial_year_end?: string;
   tax_status: string;
   closed_through: string | null;
   profile: { full_name: string; capacity: string; image_data: string } | null;
@@ -177,5 +223,25 @@ export function reportSummary(r: LedgerReport, currency: string) {
     expenses: movement("expense"),
     profit: -movement("income") - movement("expense"),
     trialDifference: balances.reduce((s, b) => s + Number(b.balance_minor), 0),
+  };
+}
+
+/** Reporting calendar only. Period closing still requires its reviewed action. */
+export function accountingPeriod(on: string, start: string, yearEnd = "12-31") {
+  if (
+    !z.iso.date().safeParse(on).success ||
+    !z.iso.date().safeParse(start).success ||
+    !fiscalYearEndSchema.safeParse(yearEnd).success ||
+    on < start
+  )
+    return null;
+  const year = Number(on.slice(0, 4));
+  const endYear = on <= `${year}-${yearEnd}` ? year : year + 1;
+  const priorEnd = new Date(`${endYear - 1}-${yearEnd}T00:00:00Z`);
+  priorEnd.setUTCDate(priorEnd.getUTCDate() + 1);
+  const naturalStart = priorEnd.toISOString().slice(0, 10);
+  return {
+    from: start > naturalStart ? start : naturalStart,
+    through: `${endYear}-${yearEnd}`,
   };
 }

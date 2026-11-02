@@ -28,6 +28,10 @@ do $$declare c jsonb;j jsonb;bad jsonb;setup jsonb;doc public.work_documents;sig
  j=public.work_suite(jsonb_build_object('action','journal-update','data',jsonb_build_object('id',j->>'id','version',j->>'version','entry_date',current_date,'currency','NGN','description','Synthetic balanced capital','cash_flow','financing','lines','[{"account":"1000","debit_minor":10000,"credit_minor":0},{"account":"3000","debit_minor":0,"credit_minor":10000}]'::jsonb)));
  j=public.work_suite(jsonb_build_object('action','journal-post','data',jsonb_build_object('id',j->>'id','version',j->>'version')));
  if j->>'status'<>'posted' then raise exception 'Balanced journal failed';end if;
+ select payload into setup from public.work_owner_setup where id=1;
+ if public.work_suite('{"action":"capabilities"}') ->> 'financial_year_end' <> '12-31' then raise exception 'Fiscal calendar missing from capabilities';end if;
+ denied=false;begin perform public.work_suite(jsonb_build_object('action','setup','version',(select version from public.work_owner_setup where id=1),'data',jsonb_set(setup,'{accounting,year_end}','"06-30"')));exception when raise_exception then denied=true;end;if not denied then raise exception 'Posted accounting year-end was rewritten';end if;
+
  denied=false;begin perform public.work_suite(jsonb_build_object('action','journal-update','data',jsonb_build_object('id',j->>'id','version',j->>'version','entry_date',current_date,'currency','NGN','description','Attempted rewrite','cash_flow','none','lines',j->'lines')));exception when raise_exception then denied=true;end;if not denied then raise exception 'Posted journal edited';end if;
  c=public.work_suite(jsonb_build_object('action','reports','data',jsonb_build_object('from',current_date,'to',current_date)));if jsonb_array_length(c->'balances')<>2 then raise exception 'Trial balance did not include both accounts';end if;
  perform public.work_suite(jsonb_build_object('action','close','data',jsonb_build_object('through',current_date,'reason','Synthetic reconciled close','reconciled',true)));

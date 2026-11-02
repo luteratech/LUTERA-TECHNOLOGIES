@@ -73,6 +73,8 @@ export async function GET(
       close: boolean;
       sign: boolean;
       accounting_enabled: boolean;
+      accounting_start?: string;
+      financial_year_end?: string;
       tax_status: string;
     };
     if (action === "config") {
@@ -91,7 +93,10 @@ export async function GET(
                 .single()
             : Promise.resolve({ data: null, error: null }),
           caps.owner
-            ? db.from("work_members").select("email,role,roles,active").order("email")
+            ? db
+                .from("work_members")
+                .select("email,role,roles,active")
+                .order("email")
             : Promise.resolve({ data: [], error: null }),
           db.from("work_responsibilities").select("*"),
           caps.read

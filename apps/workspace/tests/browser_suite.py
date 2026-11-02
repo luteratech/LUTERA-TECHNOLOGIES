@@ -6,7 +6,7 @@ root=Path(__file__).resolve().parents[1]
 v=dict(l.split('=',1) for l in (root/'.env.local').read_text().splitlines() if l and not l.startswith('#'))
 origin=os.environ.get('LUTERA_TEST_URL',v['WORKSPACE_ORIGIN']);entry=v['WORKSPACE_ENTRY'];out=root/'test-results';out.mkdir(exist_ok=True)
 uid='daae4165-3435-47ea-b5f1-f5df516e9c6b';fid='cf4464da-bb13-42d0-89a1-92a34cfbdc64';did='d0a364ef-8af2-4441-a711-d138f6f406cb'
-setup={'tax':{'status':'pending','tax_id':'','registration_number':'','vat_status':'unconfirmed','effective_from':'','reference':'','notes':''},'accounting':{'enabled':False,'cutover':'','opening_reviewed':False},'solo_owner':True}
+setup={'tax':{'status':'pending','tax_id':'','registration_number':'','vat_status':'unconfirmed','effective_from':'','reference':'','notes':''},'accounting':{'enabled':False,'cutover':'2026-10-15','opening_reviewed':True,'year_end':'12-31','opening_position':{'currency':'NGN','total_minor':0,'no_receivables':True,'no_payables':True,'no_deposits':True,'no_loans':True,'no_stock':True,'no_fixed_assets':True}},'solo_owner':True}
 cfg={'owner':True,'read':True,'write':True,'post':True,'close':True,'sign':True,'setup':{'payload':setup,'version':1},'accounting_enabled':False,'tax_status':'pending','closed_through':None,'profile':None,'factors':[{'id':fid,'name':'Fixture authenticator'}],'members':[{'email':'owner@example.invalid','role':'owner','active':True},{'email':'staff@example.invalid','role':'staff','active':True}],'responsibilities':[]}
 accounts=[{'code':'1000','name':'Bank','category':'asset','cash_account':True},{'code':'3000','name':'Owner capital','category':'equity','cash_account':False}]
 settings={'company':{'name':'Lutera Technology Ltd','address':'Abuja','email':'info@luteratech.com','phone':'+2349026276130','website':'https://luteratech.com'},'currency':'NGN','bank_name':'','account_name':'','account_number':'','tax_id':'','document_notes':''}
@@ -68,6 +68,11 @@ with sync_playwright() as p:
  page.get_by_role('button',name='Save owner settings',exact=True).wait_for()
  assert page.locator('#workspace-navigation').evaluate("el=>getComputedStyle(el).backgroundColor")=='rgb(46, 91, 255)'
  assert page.locator('#workspace-main input[type=checkbox]').count()==3
+ expect(page.get_by_label('Financial year-end (MM-DD)',exact=True)).to_have_value('12-31')
+ page.get_by_text('Confirmed opening position',exact=True).wait_for()
+ page.get_by_text('First accounting period:',exact=False).wait_for()
+ assert '15 October 2026' in page.get_by_text('First accounting period:',exact=False).inner_text()
+ assert '31 December 2026' in page.get_by_text('First accounting period:',exact=False).inner_text()
  assert page.get_by_label('Accounting start date',exact=True).evaluate('el=>getComputedStyle(el).fontSize')=='16px'
  assert page.locator('.field > span').first.evaluate('el=>getComputedStyle(el).fontSize')=='14px'
  for viewport in [1280,768,390]:

@@ -842,6 +842,7 @@ function SettingsEditor({
         ).map((key) => (
           <Field key={key} label={key.replaceAll("_", " ") + " (optional)"}>
             <input
+              name={key}
               value={value[key]}
               disabled={!owner}
               maxLength={160}

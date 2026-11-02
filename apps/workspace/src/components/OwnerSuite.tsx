@@ -16,6 +16,8 @@ import { money, minor } from "@/lib/contracts";
 import { mayLeave, useUnsavedChanges } from "@/lib/unsaved";
 import {
   emptyOwnerSetup,
+  ownerSetupSchema,
+  accountingPeriod,
   journalTotals,
   reportSummary,
   type SuiteConfig,
@@ -97,8 +99,8 @@ function OwnerSettings({
   config: SuiteConfig;
   refresh: () => Promise<void>;
 }) {
-  const [value, setValue] = useState<OwnerSetup>(
-      config.setup?.payload || emptyOwnerSetup,
+  const [value, setValue] = useState<OwnerSetup>(() =>
+      ownerSetupSchema.parse(config.setup?.payload || emptyOwnerSetup),
     ),
     [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
@@ -115,6 +117,18 @@ function OwnerSettings({
     setValue(next);
     setDirty(true);
   };
+  const period = accountingPeriod(
+    value.accounting.cutover,
+    value.accounting.cutover,
+    value.accounting.year_end,
+  );
+  const displayDate = (date: string) =>
+    new Date(date + "T00:00:00Z").toLocaleDateString("en-NG", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    });
   const tax = (k: keyof OwnerSetup["tax"], v: string) =>
     update({ ...value, tax: { ...value.tax, [k]: v } });
   return (
@@ -240,6 +254,22 @@ function OwnerSettings({
               }
             />
           </Field>
+          <Field label="Financial year-end (MM-DD)">
+            <input
+              value={value.accounting.year_end}
+              required
+              pattern="[0-9]{2}-[0-9]{2}"
+              maxLength={5}
+              placeholder="12-31"
+              disabled={busy}
+              onChange={(e) =>
+                update({
+                  ...value,
+                  accounting: { ...value.accounting, year_end: e.target.value },
+                })
+              }
+            />
+          </Field>
           <Field label="Opening balances reviewed">
             <input
               type="checkbox"
@@ -283,6 +313,35 @@ function OwnerSettings({
             />
           </Field>
         </div>
+        {period && (
+          <p className="notice">
+            First accounting period: {displayDate(period.from)} to{" "}
+            {displayDate(period.through)}. Later financial years follow this
+            annual year-end. Closing a period remains a reviewed action.
+          </p>
+        )}
+        {value.accounting.opening_position && (
+          <div className="notice">
+            <strong>Confirmed opening position</strong>
+            <p>
+              As of {displayDate(value.accounting.cutover)}:{" "}
+              <span className="numeric">{money(0, "NGN")}</span>; no unpaid
+              customer invoices, supplier bills, deposits, loans, stock or fixed
+              assets. Later transactions are recorded with their actual dates.
+            </p>
+          </div>
+        )}
+        <h3>Payment terms and approval responsibilities</h3>
+        <p>
+          Enter payment terms separately on each transaction, based on the
+          agreement with the client. Due dates have no fixed default. Existing
+          document numbering sequences remain in use.
+        </p>
+        <p>
+          The owner handles approvals initially. Assign colleagues their roles,
+          department approval permissions and signing authority under User
+          access and Business permissions as they join.
+        </p>
         <p>
           Owner self-approval is recorded as such. It does not claim an
           independent reviewer participated. Colleague signing and ledger
@@ -1025,7 +1084,7 @@ function Accounting({
           onSaved={done}
         />
       )}
-      {tab === "reports" && <Reports />}
+      {tab === "reports" && <Reports config={config} />}
       {tab === "periods" && <Periods config={config} refresh={refresh} />}
     </>
   );
@@ -1451,8 +1510,19 @@ function SourceImport({
     </section>
   );
 }
-function Reports() {
-  const [from, setFrom] = useState(today().slice(0, 4) + "-01-01"),
+function Reports({ config }: { config: SuiteConfig }) {
+  const [from, setFrom] = useState(
+      () =>
+        accountingPeriod(
+          today(),
+          config.accounting_start ||
+            config.setup?.payload.accounting.cutover ||
+            today().slice(0, 4) + "-01-01",
+          config.financial_year_end ||
+            config.setup?.payload.accounting.year_end ||
+            "12-31",
+        )?.from || today(),
+    ),
     [to, setTo] = useState(today()),
     [currency, setCurrency] = useState("NGN"),
     [report, setReport] = useState<LedgerReport | null>(null),

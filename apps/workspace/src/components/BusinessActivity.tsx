@@ -73,7 +73,11 @@ export default function BusinessActivity() {
                   {String(r.entity)}
                   <small>{String(r.entity_id)}</small>
                 </td>
-                <td>{String(r.actor)}</td>
+                <td>
+                  {String(r.actor) === "00000000-0000-0000-0000-000000000000"
+                    ? "System — database management"
+                    : String(r.actor)}
+                </td>
               </tr>
             ))}
           </tbody>
