@@ -1,7 +1,7 @@
 """Unique search metadata and structured data for public, crawlable HTML pages."""
 import json
 from html import escape
-from company import SERVICES
+from company import SERVICES, SITE
 
 PAGE_META={
  '':('Hardware, Software & AI | Lutera Technology Ltd','Abuja-based IT and AI solutions: AI agents, automation, software development, data analytics, cloud integration, hardware supply and technical support.'),
@@ -20,7 +20,7 @@ PAGE_META={
  'services/cloud-integration':('Cloud Solutions & Systems Integration in Abuja | LUTERA','Explore cloud-based solutions and systems integration. Discuss application connections, migration requirements and compatibility with LUTERA Technologies.'),
  'privacy':('Privacy Notice | LUTERA Technologies','Learn how LUTERA handles contact and quote enquiries, functional equipment-list storage, email processing, privacy questions and data requests.'),
  'terms':('Website & Enquiry Terms | LUTERA Technologies','Read the terms for using the LUTERA website and sending enquiries, including quotation scope, equipment availability and written supply agreements.'),
- 'cookies':('Cookies & Browser Storage | LUTERA Technologies','Understand functional session storage, the equipment enquiry list and third-party form processing on the LUTERA Technologies website.'),
+ 'cookies':('Cookies & Browser Storage | LUTERA Technologies','Understand functional session storage, the equipment enquiry list and the visit storage notice on the LUTERA Technologies website.'),
  'thank-you':('Enquiry Submitted | LUTERA Technologies','Your enquiry has been received by Lutera. Find direct email and WhatsApp contact details for LUTERA Technologies.'),
  '404':('Page Not Found | LUTERA Technologies','The requested LUTERA page could not be found. Explore our IT, AI and hardware services or return to the homepage.'),
 }
@@ -34,7 +34,7 @@ SERVICE_NAMES={s['slug']:s['title'] for s in SERVICES}
 
 def metadata(route):
     if route.startswith('services/'):
-        service=next(s for s in SERVICES if s['slug']==route.split('/')[1])
+        service=next(s for s in SITE['services'] if s['slug']==route.split('/')[1])
         return service['title']+' | Lutera Technology Ltd', service['description']
     title,description=PAGE_META[route]
     for old,new in [('LUTERA Technologies','Lutera Technology Ltd'),('LUTERA technology','Lutera technology'),('LUTERA','Lutera')]:
@@ -67,7 +67,7 @@ def schema(route,title,description,organization,origin,base):
         graph.append({'@type':'BreadcrumbList','@id':canonical+'#breadcrumb','itemListElement':[
             {'@type':'ListItem','position':i+1,'name':name,'item':url} for i,(name,url) in enumerate(crumbs)]})
         webpage['breadcrumb']={'@id':canonical+'#breadcrumb'}
-    if route.startswith('services/'):
+    if route.startswith('services/') and route.split('/')[1] in SERVICE_NAMES:
         name=SERVICE_NAMES[route.split('/')[1]]
         service={'@type':'Service','@id':canonical+'#service','name':name,'serviceType':name,'description':description,'url':canonical,'provider':{'@id':home+'#organization'}}
         graph.append(service);webpage['mainEntity']={'@id':canonical+'#service'}

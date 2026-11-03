@@ -24,7 +24,7 @@ with sync_playwright() as p:
  c=b.new_context(viewport={'width':1440,'height':1000},reduced_motion='reduce')
  q=c.new_page();errors=[];q.on('pageerror',lambda e:errors.append(str(e)))
  visit(q,base,wait_until='networkidle')
- q.get_by_role('button',name='Reject optional',exact=True).click()
+ q.get_by_role('button',name='Got it',exact=True).click()
  assert not errors,errors
  assert q.locator('.service-grid .service-card').count()==8
  # Header enquiry is a complete empty-state/list workflow, not a dead link.

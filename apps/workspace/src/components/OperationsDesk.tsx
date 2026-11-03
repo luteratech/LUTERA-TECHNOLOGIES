@@ -1,4 +1,5 @@
 "use client";
+import { displayLabel } from "@/lib/workspace-display";
 import { useFeedback } from "@/lib/notifications";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/client";
@@ -431,37 +432,13 @@ export default function OperationsDesk({
   return (
     <>
       <section className="panel">
-        <label className="field">
-          <span id="operational-area-label">Operational area</span>
-          <select
-            aria-labelledby="operational-area-label"
-            value={module.entity}
-            onChange={async (e) => {
-              const selectedArea = e.target.value;
-              if (!(await mayLeave())) return;
-              setModule(modules.find((m) => m.entity === selectedArea)!);
-              setPage(0);
-              setForm(null);
-              setSelected(null);
-              setDirty(false);
-              setError("");
-              setFeedback("");
-            }}
-          >
-            {allowed.map((m) => (
-              <option key={m.entity} value={m.entity}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <h2>{module.label}</h2>
+        <h2 className="sr-only">{module.label} records</h2>
         <p>{module.description}</p>
         {!form && (
           <>
             <div className="form-grid">
               <label className="field">
-                <span>Search descriptions or exact record ID</span>
+                <span>Search {module.label.toLowerCase()}</span>
                 <input
                   type="search"
                   value={query}
@@ -518,14 +495,27 @@ export default function OperationsDesk({
         {error && null}
         {module.action && write && !form && (
           <button onClick={() => start(module.action!, module.fields!)}>
-            New record +
+            {(
+              {
+                shipment: "Record shipment",
+                inspection: "Record inspection",
+                location: "Add stock location",
+                "stock-hold": "Quarantine stock",
+                "order-progress": "Update fulfilment",
+                visit: "Schedule visit",
+                "supplier-bank": "Propose payment details",
+                "acceptance-request": "Request acceptance evidence",
+                "approval-rule": "Add approval rule",
+              } as Record<string, string>
+            )[module.action] || "Add " + module.label.toLowerCase()}{" "}
+            +
           </button>
         )}
       </section>
       {form ? (
         <section className="panel">
           <div className="toolbar">
-            <h2>{form.action.replaceAll("-", " ")}</h2>
+            <h2>{displayLabel(form.action)}</h2>
             <button
               className="secondary"
               onClick={async () => {
@@ -619,7 +609,14 @@ export default function OperationsDesk({
       ) : (
         <section className="panel">
           {rows.length === 0 ? (
-            <p>No records yet.</p>
+            <div className="compact-empty">
+              <h3>No {module.label.toLowerCase()} yet</h3>
+              <p>
+                {module.action && write
+                  ? "Use the action above to add the first record."
+                  : "Records available to your account will appear here."}
+              </p>
+            </div>
           ) : (
             rows.map((r) => (
               <details className="operation-record" key={r.id}>

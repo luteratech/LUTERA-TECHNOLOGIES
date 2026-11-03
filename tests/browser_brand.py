@@ -32,7 +32,7 @@ with sync_playwright() as p:
   q.set_viewport_size({'width':width,'height':1000})
   for route in ['', 'services/']:
    q.goto(base+route,referer=base,wait_until='load')
-   if q.locator('#cookie-consent').is_visible():q.get_by_role('button',name='Reject optional').click()
+   if q.locator('#cookie-consent').is_visible():q.get_by_role('button',name='Got it').click()
    assert q.evaluate('document.documentElement.scrollWidth<=innerWidth'),(width,route)
    cards=q.locator('[data-service-grid] article')
    assert cards.count()==8

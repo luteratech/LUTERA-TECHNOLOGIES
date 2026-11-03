@@ -122,8 +122,8 @@ with sync_playwright() as p:
  page.locator('#workspace-navigation').get_by_role('button',name='Staff & Cards',exact=True).click()
  page.locator('#workspace-navigation').get_by_role('button',name='Staff profiles & cards',exact=True).click()
  page.get_by_role('button',name='Add staff profile').click()
- page.get_by_label(re.compile('^name',re.I)).fill('Sample Profile')
- page.get_by_label(re.compile('^title',re.I)).fill('UI review — sample only')
+ page.get_by_label(re.compile('^Full name',re.I)).fill('Sample Profile')
+ page.get_by_label(re.compile('^Job title',re.I)).fill('UI review — sample only')
  page.get_by_label(re.compile('^staff number',re.I)).fill('SAMPLE-001')
  page.get_by_role('button',name='Save staff profile').click()
  page.get_by_role('heading',name='Sample Profile',level=2,exact=True).wait_for()
@@ -159,6 +159,7 @@ with sync_playwright() as p:
  page.get_by_role('button',name='Publish website').click()
  page.get_by_role('dialog').get_by_role('button',name='Confirm',exact=True).click()
  page.get_by_text('Build requested.',exact=False).wait_for()
+ page.locator('#workspace-navigation').get_by_role('button',name='Preview & publishing',exact=True).click()
  page.get_by_role('button',name='Check live version').click()
  page.get_by_text('This version is live',exact=False).wait_for()
  for width in [390,768,1280]:

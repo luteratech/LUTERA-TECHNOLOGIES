@@ -1,6 +1,8 @@
 "use client";
 import { useFeedback } from "@/lib/notifications";
 import { useState } from "react";
+import { CSVUpload, downloadTemplate } from "./ImportTools";
+import { useUnsavedChanges } from "@/lib/unsaved";
 import { api } from "@/lib/client";
 type Preview = { row: number; name: string; email: string; duplicate: boolean };
 export default function CustomerImport({ onSaved }: { onSaved: () => void }) {
@@ -9,16 +11,37 @@ export default function CustomerImport({ onSaved }: { onSaved: () => void }) {
     [message, setMessage] = useFeedback(),
     [busy, setBusy] = useState(false),
     [key, setKey] = useState(() => crypto.randomUUID());
+  useUnsavedChanges(!!csv);
   return (
-    <section className="panel">
-      <h3>Import customer records</h3>
+    <details className="panel import-tools">
+      <summary>Import customer records</summary>
       <p>
         Use columns: name,email,phone,address,sector. Preview first; potential
         duplicates must be reviewed before importing.
       </p>
+      <button
+        className="text-button"
+        type="button"
+        onClick={() =>
+          downloadTemplate(
+            "lutera-customers-template.csv",
+            "name,email,phone,address,sector\n",
+          )
+        }
+      >
+        Download CSV template
+      </button>
+      <CSVUpload
+        disabled={busy}
+        onRead={(text) => {
+          setCSV(text);
+          setRows([]);
+        }}
+      />
       <label className="field">
         <span>Customer CSV</span>
         <textarea
+          disabled={busy}
           rows={5}
           value={csv}
           onChange={(e) => {
@@ -102,6 +125,6 @@ export default function CustomerImport({ onSaved }: { onSaved: () => void }) {
           </table>
         </div>
       )}
-    </section>
+    </details>
   );
 }

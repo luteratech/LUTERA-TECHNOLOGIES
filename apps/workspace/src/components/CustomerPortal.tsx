@@ -1,5 +1,6 @@
 "use client";
 import { useFeedback, confirmAction } from "@/lib/notifications";
+import { displayDate, displayLabel } from "@/lib/workspace-display";
 import StatusBadge from "./StatusBadge";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client";
@@ -175,6 +176,11 @@ export default function CustomerPortal() {
                 {state.documents.map((s) => (
                   <article className="card" key={s.id}>
                     <StatusBadge status={s.kind} />
+                    <p>
+                      {s.kind === "quotation"
+                        ? "Review quotation and stated terms"
+                        : "View the shared document"}
+                    </p>
                     <h2>{s.number}</h2>
                     <p>{money(s.total_minor, s.currency)}</p>
                     <button
@@ -203,7 +209,7 @@ export default function CustomerPortal() {
           </section>
           {!!state.acceptance_requests?.length && (
             <section className="panel">
-              <h2>Requested acceptance evidence</h2>
+              <h2>Actions requested by Lutera</h2>
               <p>
                 Upload only the evidence Lutera requested. PDF, JPEG, PNG or
                 WebP, up to 1 MB.
@@ -211,9 +217,13 @@ export default function CustomerPortal() {
               {state.acceptance_requests.map((r) => (
                 <article className="operation-record" key={r.id}>
                   <h3>{r.document}</h3>
+                  <StatusBadge status={r.status} />
                   <p>{r.prompt}</p>
                   {r.status === "completed" ? (
-                    <p>Evidence received.</p>
+                    <p>
+                      Evidence received. Lutera will review it against the
+                      requested document.
+                    </p>
                   ) : (
                     <label className="field">
                       <span>Upload evidence for {r.document}</span>
@@ -259,6 +269,53 @@ export default function CustomerPortal() {
           {rec && selected && (
             <section className="panel">
               <h2>{String(rec.number)}</h2>
+              <dl className="record-summary">
+                <div>
+                  <dt>Organisation</dt>
+                  <dd>
+                    {String(
+                      (
+                        rec.snapshot as
+                          | { party?: { name?: string } }
+                          | undefined
+                      )?.party?.name ||
+                        (payload.customer as { name?: string } | undefined)
+                          ?.name ||
+                        state.customers.find((c) => c.id === rec.customer_id)
+                          ?.name ||
+                        "As shown in the issued document",
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Document version</dt>
+                  <dd className="document-reference">
+                    {rec.version ? String(rec.version) : "Shared issued copy"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Current action</dt>
+                  <dd>
+                    {rec.kind === "quotation"
+                      ? "Review quotation and record your decision"
+                      : "Review or download your document"}
+                  </dd>
+                </div>
+              </dl>
+              {state.acceptance_requests
+                ?.filter((r) => r.document === rec.number)
+                .map((r) => (
+                  <p key={r.id}>
+                    <StatusBadge status={r.status} />{" "}
+                    {r.status === "completed"
+                      ? "Evidence received for this document."
+                      : r.prompt}
+                  </p>
+                ))}
+              <p>
+                Review this shared document version before recording a decision.
+                Download the PDF for the complete issued document and its terms.
+              </p>
               <a
                 className="button secondary"
                 href={"/api/portal/download?id=" + selected.id}
@@ -266,8 +323,8 @@ export default function CustomerPortal() {
                 Download PDF ↗
               </a>
               <p>
-                {String(rec.kind)} ·{" "}
-                {String(rec.document_date || payload.date || "")}
+                {displayLabel(String(rec.kind))} ·{" "}
+                {displayDate(String(rec.document_date || payload.date || ""))}
               </p>
               <div className="table-scroll">
                 <table>
@@ -367,14 +424,14 @@ export default function CustomerPortal() {
                 <article key={w.reference}>
                   <h3>{w.title}</h3>
                   <p>
-                    {w.reference} · {w.status}
-                    {w.due_on ? " · Target " + w.due_on : ""}
+                    {w.reference} · {displayLabel(w.status)}
+                    {w.due_on ? " · Target " + displayDate(w.due_on) : ""}
                   </p>
                   <ul>
                     {w.milestones.map((m, i) => (
                       <li key={i}>
-                        {m.title} · {m.status}
-                        {m.due_on ? " · " + m.due_on : ""}
+                        {m.title} · {displayLabel(m.status)}
+                        {m.due_on ? " · " + displayDate(m.due_on) : ""}
                       </li>
                     ))}
                   </ul>

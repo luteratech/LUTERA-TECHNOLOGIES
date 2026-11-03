@@ -76,9 +76,7 @@ with sync_playwright() as p:
  page.screenshot(path=str(out/'departments-dashboard.png'),full_page=True)
  go(page,'Sales & Customers','Customers')
 
- try: page.get_by_role('combobox').first.wait_for(timeout=5000)
- except Exception:
-  print('Fixture calls:',calls);print('Page errors:',errors);print(page.locator('main').inner_text());raise
+ page.get_by_role('heading',name='Customers',exact=True,level=1).wait_for()
  page.get_by_role('button',name='Add a customer',exact=True).click()
  page.get_by_label(re.compile('Customer / organization name',re.I)).fill('UI business fixture updated')
  page.get_by_role('button',name='Save record',exact=True).click()
@@ -130,10 +128,7 @@ with sync_playwright() as p:
  page.locator('#workspace-navigation').get_by_role('button',name='Stock locations',exact=True).click()
  assert not page.locator('#workspace-navigation').is_visible()
  page.get_by_role('heading',name='Stock locations',exact=True,level=1).wait_for()
- try: page.get_by_label('Operational area',exact=True).select_option('locations',timeout=10000)
- except Exception:
-  print('Fixture calls:',calls);print('Page errors:',errors);print(page.locator('main').inner_text());raise
- page.get_by_role('button',name='New record +',exact=True).click()
+ page.get_by_role('button',name='Add stock location +' ,exact=True).click()
  page.get_by_label(re.compile(r'^Location name')).fill('UI fixture warehouse')
  page.get_by_role('button',name='Confirm and save',exact=True).click()
  page.get_by_text('Recorded successfully.',exact=False).wait_for()
@@ -180,7 +175,7 @@ with sync_playwright() as p:
  nav.wait_for_url('**module=payments*')
  nav.get_by_role('button',name='Go back',exact=True).click()
  nav.get_by_role('button',name='Go back',exact=True).click()
- nav.get_by_role('combobox').first.wait_for()
+ nav.get_by_role('button',name='Add a customer',exact=True).wait_for()
  nav.wait_for_function("new URLSearchParams(location.search).get('module')==='customers'")
  nav.get_by_role('button',name='Go forward',exact=True).click()
  nav.get_by_role('button',name='Go forward',exact=True).click()
@@ -203,13 +198,13 @@ with sync_playwright() as p:
  nav.get_by_role('dialog',name='Discard unsaved changes?',exact=True).get_by_role('button',name='Discard changes',exact=True).click()
  nav.get_by_role('button',name='Add a customer',exact=True).wait_for()
  go(nav,'Procurement & Inventory','Stock locations')
- nav.get_by_label('Operational area',exact=True).select_option('stock_holds')
+ nav.locator('#workspace-navigation').get_by_role('button',name='Stock quarantine',exact=True).click()
  nav.get_by_role('button',name='Go back',exact=True).click()
  nav.wait_for_function("new URLSearchParams(location.search).get('control')==='locations'")
  nav.get_by_role('button',name='Go forward',exact=True).click()
  nav.wait_for_function("new URLSearchParams(location.search).get('control')==='stock_holds'")
- nav.reload();nav.get_by_label('Operational area',exact=True).wait_for()
- assert nav.get_by_label('Operational area',exact=True).input_value()=='stock_holds'
+ nav.reload();nav.get_by_role('heading',name='Stock quarantine',level=1,exact=True).wait_for()
+ assert 'control=stock_holds' in nav.url
  nav.get_by_role('button',name='Go back',exact=True).click()
  nav.wait_for_function("new URLSearchParams(location.search).get('control')==='locations'")
  go(nav,'Finance','Financial reports')
@@ -220,7 +215,7 @@ with sync_playwright() as p:
  limited.add_init_script("Object.defineProperty(window,'sessionStorage',{get(){throw Error('Storage disabled for test')}})")
  limited.route('**/api/**',fixture);n=limited.new_page();n.goto(origin+'/'+entry+'?section=overview')
  go(n,'Procurement & Inventory','Stock locations')
- n.get_by_label('Operational area',exact=True).select_option('stock_holds')
+ n.locator('#workspace-navigation').get_by_role('button',name='Stock quarantine',exact=True).click()
  n.get_by_role('button',name='Go back',exact=True).click()
  n.wait_for_function("new URLSearchParams(location.search).get('control')==='locations'")
  n.get_by_role('button',name='Go forward',exact=True).click()

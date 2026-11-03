@@ -145,7 +145,7 @@ legal=json.loads((ROOT/'content/legal.json').read_text().replace('{{hosting_prov
 for route,(title,subtitle,parts) in legal.items():
     if route in ['privacy','cookies']:parts.append(('Your cookie preferences',STORAGE_NOTICE))
     pages[route]=(title,pagehero(title,subtitle,'',title)+'<section><div class="wrap legal">'+''.join('<h2>'+heading+'</h2><p>'+copy+'</p>' for heading,copy in parts)+'</div></section>')
-pages['thank-you']=('Enquiry submitted',pagehero('Thank you for<br>starting the conversation.','If you completed the form service’s verification, your enquiry has been submitted for processing. We reply within two working days.','','Thank you')+'<section><div class="wrap split"><div><h2>Your next step.</h2><p>An enquiry does not place an order. If you need to follow up or did not finish the form service’s check, contact us directly using the details here.</p>'+btn('','Back to home')+'</div>'+contactside()+'</div></section>')
+pages['thank-you']=('Enquiry submitted',pagehero('Thank you for<br>starting the conversation.','If you sent an enquiry, our team will review it and contact you. We reply within two working days.','','Thank you')+'<section><div class="wrap split"><div><h2>Your next step.</h2><p>An enquiry does not place an order. If you need to follow up, contact us using the details here.</p>'+btn('','Back to home')+'</div>'+contactside()+'</div></section>')
 pages['404']=('Page not found',pagehero('A different<br>way forward.','This page could not be found. Explore our services or return to the homepage.','','Page not found')+'<section><div class="wrap">'+btn('','Back to home')+'</div></section>')
 
 pages=enhance(pages,BASE,FORM_ORIGIN,icon,eye,btn,pagehero,cta)
@@ -158,14 +158,19 @@ pages=add_digital_pages(pages,BASE,pagehero,icon)
 if os.environ.get('LUTERA_ENQUIRY_TRANSPORT', 'workspace') == 'workspace':
     for route,(title,body) in list(pages.items()):
         body=re.sub(r'action="https://formsubmit\.co/[^"]+"', 'action="https://workspace.luteratech.com/api/enquiry"', body)
-        body=body.replace('If you completed the form service’s verification, your enquiry has been submitted for processing.', 'Your enquiry has been received.')
-        body=body.replace('If you need to follow up or did not finish the form service’s check, contact us directly using the details here.', 'If you need to follow up, contact us using the details here.')
+        body=body.replace('If you sent an enquiry, our team will review it and contact you.', 'Your enquiry has been received.')
+        body=body.replace('If you need to follow up, contact us using the details here.', 'If you need to follow up, contact us using the details here.')
         body=body.replace('Both forms send the submitted fields to FormSubmit, which processes them and routes them to info@luteratech.com. FormSubmit is a third-party form service, not a database operated by LUTERA. It may retain submissions or technical logs under its own policy. Review <a href="https://formsubmit.co/privacy.pdf" target="_blank" rel="noopener noreferrer">FormSubmit’s privacy policy</a>. Its spam-prevention checks may use Google reCAPTCHA. Email is processed by Zoho Mail.', 'Enquiries are saved in Lutera’s private business workspace, hosted through Vercel and Supabase. Authorized staff use them to respond to your request. Resend delivers business notifications and emails; replies to our monitored inbox are processed by Zoho Mail.')
         body=body.replace('Enquiries are reviewed through the business email inbox.', 'Enquiries are reviewed by authorized staff in the private business workspace.')
         body=body.replace('No private customer account or RFQ database is operated by this website.', 'Approved customers may separately access explicitly shared documents through the customer portal. Staff access and customer access are separate.')
         body=body.replace('Sending a form takes you to FormSubmit for processing and spam prevention. Its service and Google reCAPTCHA may use cookies or similar technology. Read <a href="https://formsubmit.co/privacy.pdf" target="_blank" rel="noopener noreferrer">FormSubmit’s privacy policy</a> for details.', 'Public forms send your enquiry to Lutera’s private business system. The customer portal uses a secure session cookie after you explicitly sign in; it is not an advertising or analytics cookie.')
-        body=re.sub(r'Spam-prevention services may use their own cookies on the submission page\. Last updated: \d{1,2} [A-Za-z]+ \d{4}\.', 'The separately accessed customer portal uses a secure session cookie. Last updated: 28 October 2026.', body)
+        body=re.sub(r'Spam-prevention services may use their own cookies on the submission page\. Last updated: \d{1,2} [A-Za-z]+ \d{4}\.', 'The separately accessed customer portal uses a secure session cookie. Last updated: 3 November 2026.', body)
         pages[route]=(title,body)
+
+# Archived service addresses remain reachable while current listings stay accurate.
+for service in [s for s in SITE['services'] if s.get('archived')]:
+    route='services/'+service['slug']
+    pages[route]=(service['title'],pagehero(escape(service['title']), 'This service is archived from our current listing. Contact Lutera to discuss your requirements.', '', 'Service archive')+'<section><div class="wrap"><h2>Find the right service for your next project.</h2>'+btn('services','Explore current services')+'</div></section>')
 
 
 def copy_style(markup):
@@ -217,7 +222,7 @@ for route,(page_title,body) in pages.items():
     organization={'@context':'https://schema.org','@type':'Organization','name':COMPANY['name'],'legalName':COMPANY['legal_name'],'url':ORIGIN+BASE,'description':NATURE_OF_BUSINESS,'email':COMPANY['email'],'telephone':COMPANY['phone'],'address':{'@type':'PostalAddress','streetAddress':STREET_ADDRESS,'addressLocality':CITY,'addressRegion':STATE,'addressCountry':COMPANY['country']}}
     organization['contactPoint']=[{'@type':'ContactPoint','contactType':'sales','email':COMPANY['email'],'telephone':COMPANY['phone']},{'@type':'ContactPoint','contactType':'customer support','email':SUPPORT_EMAIL,**({'telephone':WHATSAPP_PHONE} if WHATSAPP_PHONE else {})}]
     structured=schema(route,title,description,organization,ORIGIN,BASE)
-    robots='noindex,follow' if NOINDEX or route in ['404','thank-you'] else 'index,follow,max-image-preview:large'
+    robots='noindex,follow' if NOINDEX or route in ['404','thank-you'] or any('services/'+s['slug']==route and s.get('archived') for s in SITE['services']) else 'index,follow,max-image-preview:large'
     verification=''.join(f'<meta name="{name}" content="{escape(os.environ[key],quote=True)}">' for key,name in [('GOOGLE_SITE_VERIFICATION','google-site-verification'),('BING_SITE_VERIFICATION','msvalidate.01')] if os.environ.get(key))
     nav=''.join(f'<a href="{url(r)}"'+(' aria-current="page"' if route==r or (r=='services' and route.startswith('services/')) else '')+'>'+label+'</a>' for r,label in [('about','About'),('services','Services'),('solutions','Solutions'),('contact','Contact')])
     nav+='<button class="enquiry-nav" type="button" data-open-enquiry aria-label="View enquiry list">Enquiry <span data-enquiry-count>0</span></button>'+btn('request-quote','Request a quote','light')
@@ -230,6 +235,6 @@ for route,(page_title,body) in pages.items():
     destination=ROOT/('404.html' if route=='404' else route+'/index.html' if route else 'index.html')
     destination.parent.mkdir(parents=True,exist_ok=True)
     destination.write_text(responsive_photos(doc.replace('↗',arrow).replace('<br>','<br> ')))
-(ROOT/'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+''.join('<url><loc>'+ORIGIN+url(r)+'</loc></url>' for r in pages if not NOINDEX and r not in ['404','thank-you'])+'</urlset>')
+(ROOT/'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+''.join('<url><loc>'+ORIGIN+url(r)+'</loc></url>' for r in pages if not NOINDEX and r not in ['404','thank-you'] and not any('services/'+s['slug']==r and s.get('archived') for s in SITE['services']))+'</urlset>')
 (ROOT/'robots.txt').write_text('User-agent: *\nAllow: /\n'+('' if NOINDEX else 'Sitemap: '+ORIGIN+BASE+'sitemap.xml\n'))
 print(f'Built {len(pages)} public pages at {ORIGIN+BASE}')

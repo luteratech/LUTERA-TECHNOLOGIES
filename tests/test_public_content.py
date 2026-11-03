@@ -26,12 +26,16 @@ with tempfile.TemporaryDirectory(prefix='lutera-cms-test-') as tmp:
  custom['company']['display_phone']='+234 801 234 5678'
  custom['services']=[{**custom['services'][4],'slug':'new-ai-service','title':'AI & workflow <review>'},{**custom['services'][0],'key':'new-service','slug':'new-service','title':'Custom service','description':'New safely escaped service.','detail':{'heading':'A clear <brief>','body':'Plain text <script>alert(1)</script>','points':['One useful point.']}}]
  custom['socials']=[{'label':'Company profile','url':'https://example.com/company?view=lutera&source=website'}]
+ custom['services'].append({**site['services'][1],'archived':True})
  validate(custom)
  (stage/'content/site.json').write_text(json.dumps(custom))
  subprocess.run([sys.executable,str(stage/'scripts/build_vercel.py')],cwd=stage,env=dict(os.environ,LUTERA_CONTENT_SOURCE='repository'),check=True)
  output=stage/'_site'
- assert len(list(output.rglob('*.html')))==13
+ assert len(list(output.rglob('*.html')))==14
  assert (output/'services/new-service/index.html').exists()
+ assert (output/('services/'+site['services'][1]['slug']+'/index.html')).exists()
+ archived=(output/('services/'+site['services'][1]['slug']+'/index.html')).read_text()
+ assert 'archived' in archived.lower() and 'Explore current services' in archived
  assert (output/'services/new-ai-service/index.html').exists()
  assert not (output/'services/it-procurement/index.html').exists()
  home=(output/'index.html').read_text()

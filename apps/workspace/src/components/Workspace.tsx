@@ -15,7 +15,7 @@ const Documents = dynamic(() => import("./documents"), {
   loading: () => <p role="status">Loading section…</p>,
 });
 import WorkspaceShell from "./WorkspaceShell";
-import WorkspaceAreas from "./WorkspaceAreas";
+import WorkspaceAreas, { destination } from "./WorkspaceAreas";
 const OwnerSuite = dynamic(() => import("./OwnerSuite"), {
   loading: () => <p role="status">Opening business tools…</p>,
 });
@@ -70,6 +70,7 @@ import BusinessWorkspace, {
   type BusinessConfig,
 } from "./BusinessWorkspace";
 import PasswordInput from "./PasswordInput";
+import AccessJourney from "./AccessJourney";
 import MultiSelect from "./MultiSelect";
 import { api, saveFile } from "@/lib/client";
 export { api, saveFile } from "@/lib/client";
@@ -399,9 +400,6 @@ export default function Workspace() {
         </nav>
         <div className="page-heading">
           <div>
-            {departmentId !== "administration" && (
-              <p className="eyebrow">Lutera Technology Ltd</p>
-            )}
             <h1>{title}</h1>
           </div>
           <button
@@ -471,15 +469,14 @@ export default function Workspace() {
             )}
             {tab === "overview" && (
               <>
-                <WorkspaceAreas
-                  area="overview"
-                  tools={tools}
-                  config={accessConfig}
-                  open={openDestination}
-                />
                 {accessConfig &&
                   Object.values(accessConfig.access).some((a) => a.read) && (
                     <BusinessDashboard
+                      onTool={(id) => {
+                        const tool = tools.find((t) => t.id === id);
+                        if (tool) void openDestination(destination(tool));
+                      }}
+                      availableTools={tools.map((t) => t.id)}
                       onOpen={
                         tools.some((t) => t.department === "sales")
                           ? () => openDestination({ section: "sales" })
@@ -487,6 +484,12 @@ export default function Workspace() {
                       }
                     />
                   )}
+                <WorkspaceAreas
+                  area="overview"
+                  tools={tools}
+                  config={accessConfig}
+                  open={openDestination}
+                />
               </>
             )}
             {tab === "finance" && (
@@ -952,6 +955,9 @@ function Members({
         ? ["owner"]
         : next.filter((r) => r !== "owner"),
     );
+  const rolesDirty =
+    !!email || !!editing || selectedRoles.join(",") !== "staff";
+  useUnsavedChanges(rolesDirty);
   async function save(address: string, assigned: string[], active: boolean) {
     setBusy(true);
     setMessage("");
@@ -980,7 +986,9 @@ function Members({
           void save(email, selectedRoles, editing?.active ?? true);
         }}
       >
-        <h2>{editing ? "Edit colleague roles" : "Approve a colleague"}</h2>
+        <h2>
+          {editing ? "Edit colleague roles" : "Approve an existing account"}
+        </h2>
         <p>
           Assign several workspace roles to one person. Use Business permissions
           for Sales, Procurement, Projects and other departments, including
@@ -1010,7 +1018,7 @@ function Members({
         </div>
         <div className="actions">
           <button disabled={busy || !selectedRoles.length}>
-            {editing ? "Save colleague roles" : "Approve account"}
+            {editing ? "Save colleague roles" : "Save account access"}
           </button>
           {editing && (
             <button
@@ -1028,10 +1036,22 @@ function Members({
         </div>
 
         {error && null}
-        <Notice>
-          Approval does not create a password or send an invitation. Use the
-          verified account invitation process; never share passwords.
-        </Notice>
+        <details className="admin-disclosure">
+          <summary>Invitations and access setup</summary>
+          <p>
+            First invite the colleague using the company authentication account.
+            Then approve the same email here, assign roles and choose their
+            business responsibilities.
+          </p>
+          <a
+            href="https://supabase.com/dashboard/project/zwtjemhrubzgaueuyuxn/auth/users"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open company invitation settings ↗
+          </a>
+        </details>
+        <AccessJourney active="accounts" />
       </form>
       <section className="panel">
         <h2>Approved accounts</h2>

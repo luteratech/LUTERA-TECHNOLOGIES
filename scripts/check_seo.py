@@ -3,7 +3,7 @@ from pathlib import Path
 from html.parser import HTMLParser
 from urllib.parse import urlsplit
 import json,struct,xml.etree.ElementTree as ET
-from company import SERVICES
+from company import SERVICES, SITE
 ROOT=Path(__file__).resolve().parents[1]
 class Page(HTMLParser):
  def __init__(self):super().__init__();self.title='';self.in_title=False;self.meta={};self.canon=[];self.structured=[];self.in_schema=False;self.schema_text='';self.hrefs=[]
@@ -44,7 +44,10 @@ for f in ROOT.rglob('*.html'):
  else:
   indexed.add(canonical);assert canonical in urls,('not in sitemap',f)
  if '/services/' in canonical and not canonical.endswith('/services/'):
-  assert {'BreadcrumbList','Service'}<=types,f
+  archived=any(s.get('archived') and canonical.endswith('/services/'+s['slug']+'/') for s in SITE['services'])
+  assert {'BreadcrumbList'}<=types,f
+  if archived:assert 'noindex' in p.meta.get('robots','') and 'Service' not in types,f
+  else:assert 'Service' in types,f
   assert len(next(n for n in graph if n['@type']=='BreadcrumbList')['itemListElement'])==3,f
 assert urls==indexed,('sitemap mismatch',urls^indexed)
 for slug in [s['slug'] for s in SERVICES]:

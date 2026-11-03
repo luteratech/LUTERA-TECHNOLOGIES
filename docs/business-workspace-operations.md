@@ -12,6 +12,9 @@ and `/admin` deliberately remain unavailable. Customer access is separate at
 **https://workspace.luteratech.com/portal**; only owner-approved customer emails
 can receive a sign-in link.
 
+For the 3 November workspace/public-site correction register, see
+[the correction release](workspace-corrections-2026-11-03.md).
+
 ## Business rules
 
 - **No payment gateway or automatic bank transactions.** Customer payments,

@@ -1442,7 +1442,11 @@ function SourceImport({
                       r.created_at ||
                       "",
                   ).slice(0, 10)}{" "}
-                  · {String(r.total_minor || r.amount_minor || 0)} minor units
+                  ·{" "}
+                  {money(
+                    Number(r.total_minor ?? r.amount_minor ?? 0),
+                    String(r.currency || "NGN"),
+                  )}
                 </option>
               ))}
             </select>

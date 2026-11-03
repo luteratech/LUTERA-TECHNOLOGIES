@@ -2,6 +2,7 @@
 import { useFeedback } from "@/lib/notifications";
 import { useEffect, useState } from "react";
 import { api, saveFile } from "@/lib/client";
+import { displayLabel, lineAmount } from "@/lib/workspace-display";
 import { minor, money } from "@/lib/contracts";
 import {
   businessDate,
@@ -26,7 +27,7 @@ const heads: FieldDef[] = [
   field("due_date", "Due / target date", "date"),
   field("currency", "Currency", "select", true, ["NGN", "USD", "GBP", "EUR"]),
   field("discount", "Discount amount", "money"),
-  field("tax", "Tax percentage", "number"),
+  { ...field("tax", "Tax percentage", "number"), step: 0.01, min: 0, max: 100 },
   field("notes", "Agreed payment terms / notes", "textarea"),
 ];
 type Line = {
@@ -240,8 +241,8 @@ export default function CommercialEditor({
             {row?.number ? String(row.number) : "Unnumbered draft"}
           </p>
           <h2>
-            {String(data.kind).replaceAll("_", " ")} ·{" "}
-            {String(row?.status || "draft")}
+            {displayLabel(String(data.kind))} ·{" "}
+            {displayLabel(String(row?.status || "draft"))}
           </h2>
         </div>
         <button
@@ -269,7 +270,7 @@ export default function CommercialEditor({
         }}
       >
         <Fields
-          fields={heads.filter((f) => f.key !== "kind" || !record)}
+          fields={heads.filter((f) => f.key !== "kind")}
           values={data}
           onChange={update}
           disabled={busy || locked || !write}
@@ -377,70 +378,9 @@ export default function CommercialEditor({
           )}
           <h3>Line items</h3>
           {lines.map((l, index) => (
-            <div className="ops-line" key={l.id || index}>
-              <div className="field">
-                <span>Catalogue item (optional)</span>
-                <Reference
-                  entity="items"
-                  label={"Catalogue item " + (index + 1)}
-                  value={l.item_id}
-                  onChange={async (id) => {
-                    try {
-                      const result = id
-                        ? await api<{ record: Row }>(
-                            "business/detail?entity=items&id=" + id,
-                          )
-                        : null;
-                      const item = result?.record;
-                      setLines((ls) =>
-                        ls.map((x, i) =>
-                          i === index
-                            ? {
-                                ...x,
-                                item_id: id,
-                                ...(item
-                                  ? {
-                                      description: String(item.name),
-                                      price: (
-                                        Number(item.unit_minor) / 100
-                                      ).toFixed(2),
-                                    }
-                                  : {}),
-                              }
-                            : x,
-                        ),
-                      );
-                      setDirty(true);
-                    } catch (e) {
-                      setMessage(e as Error);
-                    }
-                  }}
-                />
-              </div>
-              {data.kind === "invoice" && (
-                <div className="field">
-                  <span>Completed billable milestone (optional)</span>
-                  <Reference
-                    entity="tasks"
-                    label={"Billable milestone " + (index + 1)}
-                    value={l.task_id || ""}
-                    onChange={(v) => {
-                      setLines((ls) =>
-                        ls.map((x, i) =>
-                          i === index ? { ...x, task_id: v } : x,
-                        ),
-                      );
-                      setDirty(true);
-                    }}
-                  />
-                  <small>
-                    The milestone must be completed, billable, linked to this
-                    order and not invoiced previously.
-                  </small>
-                </div>
-              )}
+            <div className="commercial-line" key={l.id || index}>
               <label className="field">
-                <span>Description *</span>
+                <span>Item {index + 1} description *</span>
                 <input
                   required
                   maxLength={400}
@@ -489,6 +429,84 @@ export default function CommercialEditor({
                   }}
                 />
               </label>
+              <div className="line-amount">
+                <span>Line amount</span>
+                <strong className="numeric">
+                  {lineAmount(l.quantity, l.price) == null
+                    ? "—"
+                    : money(
+                        lineAmount(l.quantity, l.price)!,
+                        String(data.currency),
+                      )}
+                </strong>
+              </div>
+              <details className="line-options">
+                <summary>Catalogue & source details</summary>
+                <div className="form-grid">
+                  {" "}
+                  <div className="field">
+                    <span>Catalogue item (optional)</span>
+                    <Reference
+                      entity="items"
+                      label={"Catalogue item " + (index + 1)}
+                      value={l.item_id}
+                      onChange={async (id) => {
+                        try {
+                          const result = id
+                            ? await api<{ record: Row }>(
+                                "business/detail?entity=items&id=" + id,
+                              )
+                            : null;
+                          const item = result?.record;
+                          setLines((ls) =>
+                            ls.map((x, i) =>
+                              i === index
+                                ? {
+                                    ...x,
+                                    item_id: id,
+                                    ...(item
+                                      ? {
+                                          description: String(item.name),
+                                          price: (
+                                            Number(item.unit_minor) / 100
+                                          ).toFixed(2),
+                                        }
+                                      : {}),
+                                  }
+                                : x,
+                            ),
+                          );
+                          setDirty(true);
+                        } catch (e) {
+                          setMessage(e as Error);
+                        }
+                      }}
+                    />
+                  </div>
+                  {data.kind === "invoice" && (
+                    <div className="field">
+                      <span>Completed billable milestone (optional)</span>
+                      <Reference
+                        entity="tasks"
+                        label={"Billable milestone " + (index + 1)}
+                        value={l.task_id || ""}
+                        onChange={(v) => {
+                          setLines((ls) =>
+                            ls.map((x, i) =>
+                              i === index ? { ...x, task_id: v } : x,
+                            ),
+                          );
+                          setDirty(true);
+                        }}
+                      />
+                      <small>
+                        The milestone must be completed, billable, linked to
+                        this order and not invoiced previously.
+                      </small>
+                    </div>
+                  )}
+                </div>
+              </details>
               {lines.length > 1 && (
                 <button
                   type="button"
@@ -517,7 +535,7 @@ export default function CommercialEditor({
             </button>
           )}
         </fieldset>
-        <p className="ops-total">
+        <p className="ops-total commercial-total">
           Calculated total{" "}
           <strong>{money(total(), String(data.currency))}</strong>
         </p>

@@ -1,4 +1,22 @@
 "use client";
+import {
+  recordAmount,
+  recordName,
+  recordOption,
+  displayDate,
+  displayLabel,
+  serviceChoices,
+} from "@/lib/workspace-display";
+import { CSVUpload, downloadTemplate } from "./ImportTools";
+import DocumentJourney from "./DocumentJourney";
+import { caseFormPayload } from "@/lib/case-form";
+import InventoryOverview from "./InventoryOverview";
+import PaymentOverview from "./PaymentOverview";
+import BankMatching from "./BankMatching";
+import SupplierComparison from "./SupplierComparison";
+import WorkViews from "./WorkViews";
+import RecordLink from "./RecordLink";
+import SecondaryActions from "./SecondaryActions";
 import { useFeedback } from "@/lib/notifications";
 import StatusBadge from "./StatusBadge";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -169,7 +187,15 @@ const resources: Resource[] = [
   },
   { entity: "portal_events", label: "Customer portal activity", area: "sales" },
 ];
-export function BusinessDashboard({ onOpen }: { onOpen?: () => void }) {
+export function BusinessDashboard({
+  onOpen,
+  onTool,
+  availableTools = [],
+}: {
+  onOpen?: () => void;
+  onTool?: (id: string) => void;
+  availableTools?: string[];
+}) {
   const [data, setData] = useState<Record<string, unknown> | null>(null),
     [error, setError] = useFeedback("error"),
     [from, setFrom] = useState(""),
@@ -211,58 +237,85 @@ export function BusinessDashboard({ onOpen }: { onOpen?: () => void }) {
     <section className="panel">
       <div className="toolbar">
         <div>
-          <p className="eyebrow">Supply. Build. Connect.</p>
           <h2>Your business at a glance</h2>
         </div>
         {onOpen && <button onClick={onOpen}>View sales workspace ↗</button>}
       </div>
-      <div className="form-grid">
-        <label className="field">
-          <span>Work assigned to</span>
-          <select value={owner} onChange={(e) => setOwner(e.target.value)}>
-            <option value="">All permitted colleagues</option>
-            {people.map((p) => (
-              <option value={p.id} key={p.id}>
-                {p.name}
-              </option>
+      <div className="dashboard-action-bar">
+        <h3>Today’s priorities</h3>
+        <div className="actions">
+          {[
+            ["enquiries", "Review enquiries"],
+            ["signed-approvals", "Review approvals"],
+            ["tasks", "Tasks & milestones"],
+            ["payments", "Payments & receipts"],
+          ]
+            .filter(([id]) => availableTools.includes(id))
+            .map(([id, label]) => (
+              <button
+                type="button"
+                className="secondary"
+                key={id}
+                onClick={() => onTool?.(id)}
+              >
+                {label}
+              </button>
             ))}
-          </select>
-        </label>
-        <label className="field">
-          <span>Enquiry / work service</span>
-          <select value={service} onChange={(e) => setService(e.target.value)}>
-            <option value="">All services</option>
-            {[
-              "procurement",
-              "hardware",
-              "consulting",
-              "installation-labs",
-              "ai-automation",
-              "software",
-              "data",
-              "cloud-integration",
-            ].map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span>Period from</span>
-          <input
-            type="date"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-          />
-        </label>
-        <label className="field">
-          <span>Period to</span>
-          <input
-            type="date"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-          />
-        </label>
+        </div>
       </div>
+      <details className="dashboard-filters">
+        <summary>Filter business totals</summary>
+        <div className="form-grid">
+          <label className="field">
+            <span>Work assigned to</span>
+            <select value={owner} onChange={(e) => setOwner(e.target.value)}>
+              <option value="">All permitted colleagues</option>
+              {people.map((p) => (
+                <option value={p.id} key={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Enquiry / work service</span>
+            <select
+              value={service}
+              onChange={(e) => setService(e.target.value)}
+            >
+              <option value="">All services</option>
+              {[
+                "procurement",
+                "hardware",
+                "consulting",
+                "installation-labs",
+                "ai-automation",
+                "software",
+                "data",
+                "cloud-integration",
+              ].map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Period from</span>
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span>Period to</span>
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+            />
+          </label>
+        </div>
+      </details>
       {error && null}
       {data ? (
         <>
@@ -409,6 +462,7 @@ export default function BusinessWorkspace({
   department?: string;
   onOpenDocument: (id?: string) => void;
 }) {
+  const [view, setView] = useState<"list" | "board" | "calendar">("list");
   const locationReady = useRef(false);
   const [restored, setRestored] = useState(false);
   const [quotationId, setQuotationId] = useState("");
@@ -495,7 +549,7 @@ export default function BusinessWorkspace({
     const target = resources.find(
       (r) =>
         r.entity === params.get("module") &&
-        (!r.kind || r.kind === params.get("kind")) &&
+        (!r.kind || !params.get("kind") || r.kind === params.get("kind")) &&
         (config.access[r.area]?.read ||
           (r.entity === "tasks" && config.access.support?.read)),
     );
@@ -509,7 +563,16 @@ export default function BusinessWorkspace({
           encodeURIComponent(id),
       )
         .then((r) => {
-          if (active) setSelected(r.record);
+          if (active) {
+            const resolved = resources.find(
+              (item) =>
+                item.entity === target.entity &&
+                (!item.kind || item.kind === r.record.kind) &&
+                config.access[item.area]?.read,
+            );
+            if (resolved) setResource(resolved);
+            setSelected(r.record);
+          }
         })
         .catch((e) => {
           if (active) setError(e);
@@ -666,9 +729,34 @@ export default function BusinessWorkspace({
       <EntryForm
         key={selected?.id || "new" + resource.entity}
         title={(selected ? "Edit " : "New ") + resource.label.toLowerCase()}
-        fields={masterFields[resource.master].filter(
-          (f) => resource.entity !== "cases" || f.key !== "kind",
-        )}
+        fields={masterFields[resource.master]
+          .filter((f) => resource.entity !== "cases" || f.key !== "kind")
+          .map((f) =>
+            resource.entity === "cases" && f.key === "description"
+              ? {
+                  ...f,
+                  label:
+                    resource.kind === "project"
+                      ? "Project scope"
+                      : resource.kind === "ticket"
+                        ? "Issue and troubleshooting details"
+                        : "Maintenance coverage",
+                }
+              : f,
+          )
+          .filter(
+            (f) =>
+              resource.entity !== "cases" ||
+              (!(
+                resource.kind !== "project" &&
+                ["acceptance_id", "accepted_by"].includes(f.key)
+              ) &&
+                !(resource.kind === "ticket" && f.key === "starts_on") &&
+                !(
+                  resource.kind === "project" &&
+                  ["response_due_at", "responded_at"].includes(f.key)
+                )),
+          )}
         initial={selected || { id: "", kind: resource.kind }}
         config={config}
         onBack={() => setSelected(undefined)}
@@ -676,7 +764,7 @@ export default function BusinessWorkspace({
           if (!writable) throw new Error("Editing is not permitted.");
           const data =
             resource.entity === "cases"
-              ? { ...values, kind: resource.kind }
+              ? caseFormPayload(values, resource.kind!, selected)
               : values;
           await api("business/save", {
             request_key: requestKey,
@@ -765,6 +853,27 @@ export default function BusinessWorkspace({
           </button>
         </div>
         {error && null}
+        {resource.entity === "payments" && (
+          <PaymentOverview payment={selected} />
+        )}
+        {resource.entity === "bank_lines" && (
+          <BankMatching
+            line={selected}
+            choose={(paymentId) =>
+              act(
+                "Match bank line",
+                [
+                  {
+                    ...ref("payment_id", "Recorded payment", "payments", true),
+                    default: paymentId,
+                  },
+                ],
+                "bank-match",
+                { id: selected.id },
+              )
+            }
+          />
+        )}
         <Summary row={selected} />
         <div className="actions ops-gap">
           {resource.entity === "offers" &&
@@ -1052,34 +1161,13 @@ export default function BusinessWorkspace({
     );
   return (
     <>
-      <div className="business-nav">
-        <label className="field">
-          <span>Choose a tool</span>
-          <select
-            aria-label="Choose a tool"
-            value={resources.indexOf(resource)}
-            onChange={(e) => move(resources[Number(e.target.value)])}
-          >
-            {allowed.map((r) => (
-              <option key={resources.indexOf(r)} value={resources.indexOf(r)}>
-                {r.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="actions">
-          {(config.owner || config.legacy_documents) && (
-            <button className="secondary" onClick={() => onOpenDocument()}>
-              Document archive ↗
-            </button>
-          )}
-        </div>
-      </div>
+      {["quotes", "commercial", "payments", "allocations"].includes(
+        resource.entity,
+      ) && <DocumentJourney access={config.access} />}
       <section className="panel">
         <div className="toolbar">
           <div>
-            <p className="eyebrow">Your records</p>
-            <h2>{resource.label}</h2>
+            <h2 className="sr-only">{resource.label} records</h2>
           </div>
           <div className="actions">
             {writable &&
@@ -1283,7 +1371,7 @@ export default function BusinessWorkspace({
               </button>
             )}
             {resource.entity === "customers" && config.access.sales.approve && (
-              <>
+              <SecondaryActions label="Customer actions">
                 <button
                   className="secondary"
                   onClick={() =>
@@ -1337,7 +1425,46 @@ export default function BusinessWorkspace({
                 >
                   Share customer document
                 </button>
-              </>
+                {resource.entity === "customers" && config.owner && (
+                  <button
+                    className="secondary"
+                    onClick={() =>
+                      act(
+                        "Merge reviewed customer records",
+                        [
+                          ref(
+                            "source_id",
+                            "Duplicate customer to archive",
+                            "customers",
+                            true,
+                          ),
+                          ref(
+                            "target_id",
+                            "Customer to keep",
+                            "customers",
+                            true,
+                          ),
+                          field(
+                            "reason",
+                            "Why these are the same customer",
+                            "textarea",
+                            true,
+                          ),
+                          field(
+                            "reviewed",
+                            "I reviewed both records; customer portal access will be disabled until reviewed again",
+                            "checkbox",
+                            true,
+                          ),
+                        ],
+                        "customer-merge",
+                      )
+                    }
+                  >
+                    Merge duplicates
+                  </button>
+                )}
+              </SecondaryActions>
             )}
             {resource.entity === "offers" && writable && (
               <button
@@ -1388,47 +1515,6 @@ export default function BusinessWorkspace({
                 Add supplier offer +
               </button>
             )}
-            {resource.entity === "customers" && config.owner && (
-              <button
-                className="secondary"
-                onClick={() =>
-                  act(
-                    "Merge reviewed customer records",
-                    [
-                      ref(
-                        "source_id",
-                        "Duplicate customer to archive",
-                        "customers",
-                        true,
-                      ),
-                      ref("target_id", "Customer to keep", "customers", true),
-                      field(
-                        "reason",
-                        "Why these are the same customer",
-                        "textarea",
-                        true,
-                      ),
-                      field(
-                        "reviewed",
-                        "I reviewed both records; customer portal access will be disabled until reviewed again",
-                        "checkbox",
-                        true,
-                      ),
-                    ],
-                    "customer-merge",
-                  )
-                }
-              >
-                Merge duplicates
-              </button>
-            )}
-            <button
-              className="secondary"
-              disabled={busy}
-              onClick={() => void load()}
-            >
-              Refresh
-            </button>
           </div>
         </div>
         {notice && null}
@@ -1520,7 +1606,9 @@ export default function BusinessWorkspace({
                     "data",
                     "cloud",
                   ].map((value) => (
-                    <option key={value}>{value}</option>
+                    <option value={value} key={value}>
+                      {displayLabel(value)}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -1562,11 +1650,42 @@ export default function BusinessWorkspace({
             Clear filters
           </button>
         </details>
+        {["cases", "tasks"].includes(resource.entity) && (
+          <div className="view-switch" role="group" aria-label="Work view">
+            {(["list", "board", "calendar"] as const).map((v) => (
+              <button
+                type="button"
+                className={view === v ? "" : "secondary"}
+                aria-pressed={view === v}
+                key={v}
+                onClick={() => setView(v)}
+              >
+                {displayLabel(v)}
+              </button>
+            ))}
+            <small>Showing the current page of records</small>
+          </div>
+        )}
         {busy ? (
           <p role="status">Loading records…</p>
+        ) : resource.entity === "offers" && rows.length ? (
+          <SupplierComparison rows={rows} open={(r) => setSelected(r)} />
+        ) : ["cases", "tasks"].includes(resource.entity) && view !== "list" ? (
+          <WorkViews
+            rows={rows}
+            view={view}
+            people={config.people}
+            open={(r) => setSelected(r)}
+            task={resource.entity === "tasks"}
+          />
         ) : rows.length ? (
-          <div className="table-scroll">
-            <table>
+          <div
+            className="table-scroll"
+            tabIndex={0}
+            role="region"
+            aria-label={resource.label + " records"}
+          >
+            <table className="business-records-table">
               <thead>
                 <tr>
                   <th>Record</th>
@@ -1620,20 +1739,17 @@ export default function BusinessWorkspace({
                       )}
                     </td>
                     <td className="numeric">
-                      {r.total_minor || r.amount_minor || r.value_minor
-                        ? money(
-                            Number(
-                              r.total_minor || r.amount_minor || r.value_minor,
+                      {recordAmount(r) !== null
+                        ? money(recordAmount(r)!, String(r.currency || "NGN"))
+                        : displayDate(
+                            String(
+                              r.follow_up ||
+                                r.due_on ||
+                                r.document_date ||
+                                r.created_at ||
+                                "",
                             ),
-                            String(r.currency || "NGN"),
-                          )
-                        : String(
-                            r.follow_up ||
-                              r.due_on ||
-                              r.document_date ||
-                              r.created_at ||
-                              "",
-                          ).slice(0, 10)}
+                          )}
                     </td>
                     <td>
                       <button
@@ -1650,11 +1766,17 @@ export default function BusinessWorkspace({
           </div>
         ) : (
           <div className="empty">
-            <h3>No records found</h3>
+            <h3>
+              {query
+                ? "No matching records"
+                : "No " + resource.label.toLowerCase() + " yet"}
+            </h3>
             <p>
               {query
                 ? "Try another search."
-                : "Use the action above to add a record, or choose another tool."}
+                : writable
+                  ? "Use the action above to create your first record."
+                  : "Records shared with your role will appear here."}
             </p>
           </div>
         )}
@@ -1731,6 +1853,7 @@ function Related({
   }, [record.id, resource.entity]);
   return (
     <div className="ops-gap">
+      {resource.entity === "items" && <InventoryOverview item={record} />}
       {resource.entity === "cases" && (
         <BusinessDelivery
           record={record}
@@ -1887,13 +2010,18 @@ function StockBalances() {
               <th>Location / serial</th>
               <th>On hand</th>
               <th>Reserved</th>
+              <th>Quarantined</th>
               <th>Available</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r, i) => (
               <tr key={i}>
-                <td>{String(r.item_id)}</td>
+                <td>
+                  <RecordLink entity="items" id={String(r.item_id)}>
+                    {String(r.item_name || r.sku || "Stock item")}
+                  </RecordLink>
+                </td>
                 <td>
                   {String(r.location)}
                   <small className="document-reference">
@@ -1902,8 +2030,14 @@ function StockBalances() {
                 </td>
                 <td className="numeric">{Number(r.on_hand)}</td>
                 <td className="numeric">{Number(r.reserved)}</td>
+                <td className="numeric">{Number(r.quarantined || 0)}</td>
                 <td className="numeric">
-                  {Number(r.on_hand) - Number(r.reserved)}
+                  {Number(
+                    r.available ??
+                      Number(r.on_hand) -
+                        Number(r.reserved) -
+                        Number(r.quarantined || 0),
+                  )}
                 </td>
               </tr>
             ))}
@@ -1915,19 +2049,65 @@ function StockBalances() {
 }
 function BankImport({ onSaved }: { onSaved: () => void }) {
   const [text, setText] = useState(""),
-    [preview, setPreview] = useState<unknown[]>([]),
-    [message, setMessage] = useFeedback();
+    [preview, setPreview] = useState<Row[]>([]),
+    [busy, setBusy] = useState(false),
+    [, setMessage] = useFeedback();
+  useUnsavedChanges(!!text);
+  const run = async (confirm: boolean) => {
+    setBusy(true);
+    try {
+      const r = await api<{ rows?: Row[]; inserted?: number }>(
+        "business/bank-import",
+        { csv: text, confirm },
+      );
+      if (confirm) {
+        setText("");
+        setPreview([]);
+        setMessage(`${r.inserted || 0} new bank lines imported.`);
+        onSaved();
+      } else {
+        setPreview(r.rows || []);
+        setMessage(
+          "Preview ready. Review the statement lines before importing.",
+        );
+      }
+    } catch (e) {
+      setMessage(e as Error);
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
-    <section className="panel">
-      <h3>Import bank statement CSV</h3>
+    <details className="panel import-tools">
+      <summary>Import bank statement CSV</summary>
       <p>
-        Use columns: date, amount, currency, reference. Positive amounts are
-        money received. Importing does not create a payment.
+        Positive amounts are money received; negative amounts are money paid
+        out. Importing does not record a payment.
       </p>
+      <button
+        className="text-button"
+        type="button"
+        onClick={() =>
+          downloadTemplate(
+            "lutera-bank-template.csv",
+            "date,amount,currency,reference\n",
+          )
+        }
+      >
+        Download CSV template
+      </button>
+      <CSVUpload
+        disabled={busy}
+        onRead={(csv) => {
+          setText(csv);
+          setPreview([]);
+        }}
+      />
       <label className="field">
         <span>CSV contents</span>
         <textarea
-          rows={6}
+          rows={5}
+          disabled={busy}
           value={text}
           onChange={(e) => {
             setText(e.target.value);
@@ -1937,47 +2117,58 @@ function BankImport({ onSaved }: { onSaved: () => void }) {
       </label>
       <div className="actions">
         <button
+          type="button"
           className="secondary"
-          onClick={async () => {
-            try {
-              const r = await api<{ rows: unknown[] }>("business/bank-import", {
-                csv: text,
-                confirm: false,
-              });
-              setPreview(r.rows);
-              setMessage(
-                `${r.rows.length} rows validated. Review before importing.`,
-              );
-            } catch (e) {
-              setMessage(e as Error);
-            }
-          }}
+          disabled={busy || !text.trim()}
+          onClick={() => void run(false)}
         >
           Validate and preview
         </button>
         <button
-          disabled={!preview.length}
-          onClick={async () => {
-            try {
-              const r = await api<{ inserted: number }>(
-                "business/bank-import",
-                { csv: text, confirm: true },
-              );
-              setMessage(`${r.inserted} new bank lines imported.`);
-              setPreview([]);
-              onSaved();
-            } catch (e) {
-              setMessage(e as Error);
-            }
-          }}
+          type="button"
+          disabled={busy || !preview.length}
+          onClick={() => void run(true)}
         >
-          Import validated rows
+          {busy ? "Processing…" : "Import validated rows"}
         </button>
       </div>
-
       {preview.length > 0 && (
-        <pre className="import-preview">{JSON.stringify(preview, null, 2)}</pre>
+        <div className="table-scroll" tabIndex={0}>
+          <table>
+            <caption>Validated statement lines</caption>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Reference</th>
+                <th>Currency</th>
+                <th>Received</th>
+                <th>Paid out</th>
+                <th>Review</th>
+              </tr>
+            </thead>
+            <tbody>
+              {preview.map((r, i) => (
+                <tr key={i}>
+                  <td>{displayDate(String(r.posted_on))}</td>
+                  <td>{String(r.reference)}</td>
+                  <td>{String(r.currency)}</td>
+                  <td className="numeric">
+                    {Number(r.amount_minor) > 0
+                      ? money(Number(r.amount_minor), String(r.currency))
+                      : "—"}
+                  </td>
+                  <td className="numeric">
+                    {Number(r.amount_minor) < 0
+                      ? money(-Number(r.amount_minor), String(r.currency))
+                      : "—"}
+                  </td>
+                  <td>{r.duplicate ? "Already imported" : "Ready"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-    </section>
+    </details>
   );
 }

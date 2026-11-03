@@ -6,7 +6,7 @@ import json
 
 SITE = json.loads((Path(__file__).resolve().parents[1] / 'content/site.json').read_text())
 COMPANY = SITE['company']
-SERVICES = SITE['services']
+SERVICES = [s for s in SITE['services'] if not s.get('archived')]
 SUPPORT_EMAIL = COMPANY.get('support_email', COMPANY['email'])
 _whatsapp = urlsplit(COMPANY['whatsapp'])
 _digits = _whatsapp.path.strip('/') if _whatsapp.hostname == 'wa.me' else ''

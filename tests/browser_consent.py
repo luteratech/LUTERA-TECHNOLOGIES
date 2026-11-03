@@ -6,7 +6,7 @@ import json, os, shutil, threading
 from playwright.sync_api import sync_playwright
 
 ROOT=Path(os.environ.get('LUTERA_TEST_DIR',Path(__file__).resolve().parents[1]/'_site')).resolve()
-KEY='lutera_cookie_consent_session_v2'
+KEY='lutera_storage_notice_session_v3'
 class Handler(SimpleHTTPRequestHandler):
  def translate_path(self,path):return super().translate_path(path.removeprefix('/LUTERA-TECHNOLOGIES'))
  def log_message(self,*args):pass
@@ -37,48 +37,48 @@ with sync_playwright() as p:
   assert rect['y']>=0 and rect['y']+rect['height']<=height,(width,rect)
   assert rect['x']+rect['width']<=contact['x'] or rect['y']+rect['height']<=contact['y'],(width,rect,contact)
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
-  for label in ['Accept optional','Reject optional']:
+  for label in ['Got it']:
    assert page.get_by_role('button',name=label).bounding_box()['height']>=44
   if os.environ.get('LUTERA_CONSENT_SCREENSHOTS') and width in [390,1440]:
    page.screenshot(path=f"{os.environ['LUTERA_CONSENT_SCREENSHOTS']}/consent-{width}.png")
  page.set_viewport_size({'width':1440,'height':1000})
  # Reject works by keyboard, persists within the visit, and is reversible.
- page.get_by_role('button',name='Reject optional').focus();page.keyboard.press('Enter')
+ page.get_by_role('button',name='Got it').focus();page.keyboard.press('Enter')
  assert not panel.is_visible()
- assert 'rejected' in page.locator('#cookie-feedback').inner_text()
+ assert 'acknowledged' in page.locator('#cookie-feedback').inner_text()
  saved=page.evaluate('(key)=>JSON.parse(sessionStorage.getItem(key))',KEY)
- assert saved['choice']=='rejected' and saved['version']==2
+ assert saved['choice']=='acknowledged' and saved['version']==3
  assert set(saved)=={'version','choice','chosenAt'}
  assert context.cookies()==[], 'Consent stores only an essential local preference, not cookies'
  page.reload(wait_until='networkidle');assert not panel.is_visible()
  page.get_by_role('link',name='Solutions',exact=True).first.click();page.wait_for_load_state('networkidle');assert not panel.is_visible()
  page.locator('[data-cookie-settings]').click()
- assert panel.is_visible() and 'rejected' in page.locator('#cookie-current').inner_text()
- assert page.get_by_role('button',name='Accept optional').evaluate('(e)=>e===document.activeElement')
+ assert panel.is_visible() and 'acknowledged' in page.locator('#cookie-current').inner_text()
+ assert page.get_by_role('button',name='Got it').evaluate('(e)=>e===document.activeElement')
  page.keyboard.press('Escape');assert not panel.is_visible()
  assert page.locator('[data-cookie-settings]').evaluate('(e)=>e===document.activeElement')
- page.locator('[data-cookie-settings]').click();page.get_by_role('button',name='Accept optional').click()
- assert page.evaluate('(key)=>JSON.parse(sessionStorage.getItem(key)).choice',KEY)=='accepted'
+ page.locator('[data-cookie-settings]').click();page.get_by_role('button',name='Got it').click()
+ assert page.evaluate('(key)=>JSON.parse(sessionStorage.getItem(key)).choice',KEY)=='acknowledged'
  assert not panel.is_visible()
- assert 'No optional cookies' in page.locator('#cookie-feedback').inner_text()
+ assert 'No optional tracking' in page.locator('#cookie-feedback').inner_text()
  # Fresh tabs and fresh direct entries must ask even after an earlier acceptance.
  second=context.new_page();second.goto(base+'contact/',wait_until='networkidle')
  assert second.locator('#cookie-consent').is_visible()
- second.get_by_role('button',name='Reject optional').click()
- assert page.evaluate('(key)=>JSON.parse(sessionStorage.getItem(key)).choice',KEY)=='accepted'
+ second.get_by_role('button',name='Got it').click()
+ assert page.evaluate('(key)=>JSON.parse(sessionStorage.getItem(key)).choice',KEY)=='acknowledged'
  second.close()
  page.goto(base,wait_until='networkidle');assert panel.is_visible()
- page.get_by_role('button',name='Reject optional').click()
+ page.get_by_role('button',name='Got it').click()
  # Returning through a link outside this project is another fresh visit.
  page.route('**/other-project/',lambda route:route.fulfill(body=f'<a href="{base}">Return to LUTERA</a>',content_type='text/html'))
  page.goto('https://consent-return.example/other-project/');page.get_by_role('link',name='Return to LUTERA').click()
  page.wait_for_load_state('networkidle');assert panel.is_visible()
  # Old persistent approval cannot suppress the visit notice.
- page.evaluate("localStorage.setItem('lutera_cookie_consent_v1',JSON.stringify({version:1,choice:'accepted',chosenAt:Date.now(),expiresAt:Date.now()+15552000000}))")
+ page.evaluate("localStorage.setItem('lutera_cookie_consent_v1',JSON.stringify({version:1,choice:'acknowledged',chosenAt:Date.now(),expiresAt:Date.now()+15552000000}))")
  page.reload(wait_until='networkidle');assert panel.is_visible()
  assert page.evaluate("localStorage.getItem('lutera_cookie_consent_v1')") is None
  # Malformed, future-dated and future-version preferences cannot suppress the notice.
- for value in ['not-json',json.dumps({'version':999,'choice':'accepted'}),json.dumps({'version':2,'choice':'rejected','chosenAt':9999999999999})]:
+ for value in ['not-json',json.dumps({'version':999,'choice':'acknowledged'}),json.dumps({'version':2,'choice':'acknowledged','chosenAt':9999999999999})]:
   page.evaluate('([key,value])=>sessionStorage.setItem(key,value)',[KEY,value])
   page.reload(wait_until='networkidle');assert panel.is_visible()
   page.keyboard.press('Escape');assert panel.is_visible(), 'No implicit first-visit acceptance'
@@ -86,14 +86,14 @@ with sync_playwright() as p:
  assert all(url.startswith(base) or '/other-project/' in url for url in requests),requests
  context.close()
  # Blocked browser storage must not break either choice, enquiry lists or navigation.
- for label in ['Accept optional','Reject optional']:
+ for label in ['Got it']:
   limited=browser.new_context(reduced_motion='reduce')
   limited.add_init_script("Storage.prototype.getItem=function(){throw new Error('blocked')};Storage.prototype.setItem=function(){throw new Error('blocked')}")
   q=limited.new_page();q.on('pageerror',lambda error:errors.append(str(error)))
   q.goto(base+'solutions/',wait_until='networkidle')
   q.get_by_role('button',name=label).click()
   assert not q.locator('#cookie-consent').is_visible()
-  assert 'current page only' in q.locator('#cookie-feedback').inner_text()
+  assert 'Browser storage is blocked' in q.locator('#cookie-feedback').inner_text()
   q.locator('[data-add="laptop"]').first.click()
   q.locator('[data-open-enquiry]').first.click();assert q.locator('#enquiry-dialog').is_visible()
   q.keyboard.press('Escape');q.reload(wait_until='networkidle')
@@ -105,7 +105,7 @@ with sync_playwright() as p:
  q=nojs.new_page();q.goto(base+'cookies/')
  assert not q.locator('#cookie-consent').is_visible()
  assert not q.locator('[data-cookie-settings]').is_visible()
- assert 'each fresh visit' in q.locator('main').inner_text()
+ assert 'fresh entry' in q.locator('main').inner_text()
  nojs.close();browser.close()
 if server:server.shutdown()
-print('PASS first-visit notice, equal choices, responsive layout, keyboard access, visit-only preference, changing/withdrawing consent, independent new tabs, direct/external fresh entry, legacy preference removal, invalid storage, blocked storage, no tracking requests and no-JS policy.')
+print('PASS first-visit notice, honest acknowledgement, responsive layout, keyboard access, visit-only preference, reopening the notice, independent new tabs, direct/external fresh entry, legacy preference removal, invalid storage, blocked storage, no tracking requests and no-JS policy.')

@@ -56,5 +56,5 @@ jobs:
         run: python tests/browser_brand.py
       - name: Verify photographic hero and motion controls
         run: python tests/browser_hero.py
-      - name: Verify first-visit cookie choices and privacy controls
+      - name: Verify first-visit storage notice and privacy controls
         run: python tests/browser_consent.py

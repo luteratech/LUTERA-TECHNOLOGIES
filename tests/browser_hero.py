@@ -17,7 +17,7 @@ with sync_playwright() as p:
  b=p.chromium.launch(executable_path=shutil.which('chromium') or None,args=['--no-sandbox'])
  c=b.new_context(viewport={'width':1191,'height':800});q=c.new_page();errors=[]
  q.on('pageerror',lambda e:errors.append(str(e)))
- q.goto(base,wait_until='networkidle');q.get_by_role('button',name='Reject optional').click()
+ q.goto(base,wait_until='networkidle');q.get_by_role('button',name='Got it').click()
  hero=q.locator('[data-hero]');q.wait_for_function('document.querySelector("[data-hero]").dataset.motion==="running"')
  # A slow runner may finish loading after an automatic cycle has occurred.
  assert 1<=q.locator('.hero-media img').count()<=3
@@ -68,7 +68,7 @@ with sync_playwright() as p:
  def missing(route):
   failed.append(route.request.url);route.fulfill(status=404,body='Missing photo')
  r.route('**/hero-support-*.webp',missing)
- r.goto(base,wait_until='networkidle');r.get_by_role('button',name='Reject optional').click()
+ r.goto(base,wait_until='networkidle');r.get_by_role('button',name='Got it').click()
  r.wait_for_function('document.querySelector("[data-hero]").dataset.motion==="running"')
  r.wait_for_timeout(9500)
  assert failed

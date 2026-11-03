@@ -18,6 +18,7 @@ import {
   type Settings,
 } from "@/lib/contracts";
 import { workspaceOrigin } from "@/lib/origin";
+import { recordOption, stockAvailable } from "@/lib/workspace-display";
 import {
   schemas,
   commercialSchema,
@@ -29,6 +30,7 @@ import {
   type Row,
   type Access,
 } from "@/lib/business";
+import { bankFingerprint } from "@/lib/bank-fingerprint";
 import { bankRows, parseCSV } from "@/lib/business-csv";
 import { financialExport } from "@/lib/exports";
 import { backupConfiguration, runBusinessBackup } from "@/lib/business-backup";
@@ -108,6 +110,187 @@ export async function GET(
   try {
     const action = (await context.params).action.join("/");
     const { db, user } = await businessIdentity();
+    if (action === "inventory-overview") {
+      const id = z.uuid().parse(new URL(request.url).searchParams.get("id"));
+      checked(await db.from("work_items").select("id").eq("id", id).single());
+      const [balances, movements, assets] = await Promise.all([
+        db.from("work_stock_balances").select("*").eq("item_id", id).limit(100),
+        db
+          .from("work_stock")
+          .select("id,kind,quantity,serial,created_at,order_id")
+          .eq("item_id", id)
+          .order("created_at", { ascending: false })
+          .limit(20),
+        db
+          .from("work_assets")
+          .select("id,serial,site,warranty_until")
+          .eq("item_id", id)
+          .order("created_at", { ascending: false })
+          .limit(20),
+      ]);
+      return ok({
+        balances: checked(balances).map((r) => ({
+          ...r,
+          available: stockAvailable(r),
+        })),
+        movements: checked(movements),
+        assets: checked(assets),
+      });
+    }
+    if (action === "payment-overview") {
+      const id = z.uuid().parse(new URL(request.url).searchParams.get("id"));
+      const payment = checked(
+        await db
+          .from("work_payments")
+          .select("id,amount_minor,currency,status")
+          .eq("id", id)
+          .single(),
+      );
+      const [allocations, refunds] = await Promise.all([
+        db
+          .from("work_allocations")
+          .select("id,invoice_id,amount_minor")
+          .eq("payment_id", id)
+          .is("reversed_at", null),
+        db.from("work_refunds").select("amount_minor").eq("payment_id", id),
+      ]);
+      const rows = checked(allocations);
+      const allocated = rows.reduce((n, r) => n + Number(r.amount_minor), 0);
+      const refunded = checked(refunds).reduce(
+        (n, r) => n + Number(r.amount_minor),
+        0,
+      );
+      const invoices = rows.length
+        ? checked(
+            await db
+              .from("work_commercial")
+              .select("id,number")
+              .in(
+                "id",
+                rows.map((r) => r.invoice_id),
+              ),
+          )
+        : [];
+      return ok({
+        allocated,
+        refunded,
+        available:
+          payment.status === "confirmed"
+            ? Number(payment.amount_minor) - allocated - refunded
+            : 0,
+        invoices: rows.map((r) => ({
+          ...r,
+          number:
+            invoices.find((i) => i.id === r.invoice_id)?.number || "Invoice",
+        })),
+      });
+    }
+    if (action === "bank-candidates") {
+      const id = z.uuid().parse(new URL(request.url).searchParams.get("id"));
+      const line = checked(
+        await db
+          .from("work_bank_lines")
+          .select("amount_minor,currency")
+          .eq("id", id)
+          .single(),
+      );
+      if (Number(line.amount_minor) < 0) return ok({ rows: [] });
+      return ok({
+        rows: checked(
+          await db
+            .from("work_payments")
+            .select("id,reference,amount_minor,currency,paid_on")
+            .eq("amount_minor", line.amount_minor)
+            .eq("currency", line.currency)
+            .eq("status", "confirmed")
+            .eq("reconciled", false)
+            .limit(20),
+        ),
+      });
+    }
+    if (action === "references") {
+      const raw = new URL(request.url).searchParams.get("values") || "[]";
+      if (raw.length > 6000)
+        throw new BusinessError("Too many linked references.", 400);
+      const requests = z
+        .array(
+          z.object({
+            key: z.string().regex(/^[a-z0-9_]{1,60}$/),
+            id: z.uuid(),
+            entity: z.enum([
+              "customers",
+              "suppliers",
+              "cases",
+              "tasks",
+              "commercial",
+              "expenses",
+              "payments",
+              "items",
+              "quotes",
+              "enquiries",
+              "contacts",
+              "assets",
+              "stock",
+              "reservations",
+              "offers",
+              "commercial_lines",
+              "portal_shares",
+              "documents",
+              "person",
+            ]),
+          }),
+        )
+        .max(20)
+        .parse(
+          (() => {
+            try {
+              return JSON.parse(raw);
+            } catch {
+              throw new BusinessError("Invalid linked references.", 400);
+            }
+          })(),
+        );
+      const resolved = await Promise.all(
+        requests.map(async (ref) => {
+          if (ref.entity === "person") {
+            const people = checked(await db.rpc("work_business_people")) as {
+              id: string;
+              name: string;
+            }[];
+            const person = people.find((p) => p.id === ref.id);
+            return person
+              ? ([
+                  ref.key,
+                  { label: person.name, entity: "person", id: ref.id },
+                ] as const)
+              : null;
+          }
+          const result = await db
+            .from("work_" + ref.entity)
+            .select("*")
+            .eq(ref.entity === "quotes" ? "document_id" : "id", ref.id)
+            .maybeSingle();
+          if (result.error || !result.data) return null;
+          const row = result.data as Record<string, unknown>;
+          return [
+            ref.key,
+            {
+              label: recordOption(row),
+              entity:
+                ref.entity === "commercial_lines" ? "commercial" : ref.entity,
+              id:
+                ref.entity === "commercial_lines"
+                  ? String(row.record_id)
+                  : ref.id,
+              ...(row.kind ? { kind: String(row.kind) } : {}),
+            },
+          ] as const;
+        }),
+      );
+      return ok({
+        references: Object.fromEntries(resolved.flatMap((r) => (r ? [r] : []))),
+      });
+    }
     if (action === "legacy-document") {
       return ok(
         checked(
@@ -251,10 +434,26 @@ export async function GET(
         ),
       );
     }
-    if (action === "stock-balances")
-      return ok(
-        checked(await db.from("work_stock_balances").select("*").limit(500)),
+    if (action === "stock-balances") {
+      const rows = checked(
+        await db.from("work_stock_balances").select("*").limit(500),
       );
+      const ids = [...new Set(rows.map((r) => r.item_id))];
+      const items = ids.length
+        ? checked(
+            await db.from("work_items").select("id,name,sku").in("id", ids),
+          )
+        : [];
+      return ok(
+        rows.map((row) => ({
+          ...row,
+          item_name:
+            items.find((i) => i.id === row.item_id)?.name || "Unavailable item",
+          sku: items.find((i) => i.id === row.item_id)?.sku || "",
+          available: stockAvailable(row),
+        })),
+      );
+    }
     if (action === "reports")
       return ok(checked(await db.rpc("work_business_reports")));
     if (action === "balances")
@@ -405,8 +604,70 @@ export async function GET(
         .order("id", { ascending: false })
         .range(page * 50, page * 50 + 50);
       if (query) q = q.ilike("entity", `%${query.replace(/[\\%_]/g, "\\$&")}%`);
+      const actor = u.searchParams.get("actor");
+      if (actor) q = q.eq("actor", z.uuid().parse(actor));
+      const from = u.searchParams.get("from"),
+        to = u.searchParams.get("to");
+      if (from)
+        q = q.gte("created_at", z.iso.date().parse(from) + "T00:00:00+01:00");
+      if (to)
+        q = q.lte("created_at", z.iso.date().parse(to) + "T23:59:59.999+01:00");
       const rows = checked(await q);
-      return ok({ rows: rows.slice(0, 50), more: rows.length > 50 });
+      const auditRecords = new Map<string, { label: string; kind?: string }>();
+      const allowedAuditEntities = new Set([
+        "customers",
+        "commercial",
+        "payments",
+        "expenses",
+        "suppliers",
+        "cases",
+        "tasks",
+        "items",
+        "enquiries",
+        "assets",
+        "bank_lines",
+      ]);
+      const tables = [...new Set(rows.map((r) => String(r.entity)))].filter(
+        (table) => allowedAuditEntities.has(table.replace(/^work_/, "")),
+      );
+      await Promise.all(
+        tables.map(async (table) => {
+          const ids = rows
+            .filter(
+              (r) =>
+                r.entity === table &&
+                /^[a-f0-9-]{36}$/.test(String(r.entity_id)),
+            )
+            .map((r) => String(r.entity_id));
+          if (!ids.length) return;
+          const entity = table.replace(/^work_/, "");
+          const result = await db
+            .from("work_" + entity)
+            .select("*")
+            .in("id", ids);
+          for (const record of result.data || [])
+            auditRecords.set(table + ":" + record.id, {
+              label: recordOption(record),
+              ...(record.kind ? { kind: String(record.kind) } : {}),
+            });
+        }),
+      );
+      const actors = checked(await db.rpc("work_business_people")) as {
+        id: string;
+        name: string;
+      }[];
+      return ok({
+        rows: rows.slice(0, 50).map((r) => ({
+          ...r,
+          record_label: auditRecords.get(r.entity + ":" + r.entity_id)?.label,
+          record_kind: auditRecords.get(r.entity + ":" + r.entity_id)?.kind,
+          actor_name:
+            actors.find((p) => p.id === r.actor)?.name ||
+            "Former workspace member",
+        })),
+        actors,
+        more: rows.length > 50,
+      });
     }
     throw new BusinessError("Not found.", 404);
   } catch (error) {
@@ -709,7 +970,24 @@ export async function POST(
       } catch (e) {
         throw new BusinessError((e as Error).message);
       }
-      if (!b.confirm) return ok({ rows });
+      if (!b.confirm) {
+        // Match the database's jsonb-array fingerprint, including its separator spacing.
+        const fingerprints = rows.map((r) => bankFingerprint(b.account, r));
+        const existing = checked(
+          await db
+            .from("work_bank_lines")
+            .select("fingerprint")
+            .in("fingerprint", fingerprints),
+        );
+        const seen = new Set(existing.map((r) => r.fingerprint));
+        return ok({
+          rows: rows.map((row, i) => {
+            const duplicate = seen.has(fingerprints[i]);
+            seen.add(fingerprints[i]);
+            return { ...row, duplicate };
+          }),
+        });
+      }
       return ok(
         checked(
           await db.rpc("work_business", {

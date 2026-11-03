@@ -89,9 +89,15 @@ export default function Account({ session }: { session: Session }) {
   const locked = Boolean(busy) || cooldown.seconds > 0;
   return (
     <div className="account-settings">
+      <nav className="account-anchor-nav" aria-label="Account sections">
+        {["Profile", "Email", "Password", "Authenticator"].map((label, i) => (
+          <a key={label} href={"#account-section-" + (i + 1)}>
+            {label}
+          </a>
+        ))}
+      </nav>
       <section className="account-intro">
-        <p className="eyebrow">Your workspace identity</p>
-        <h2>My account</h2>
+        <h2 className="sr-only">Account settings</h2>
         <p>Manage your profile and keep your account protected.</p>
         <span className="security-badge">
           Authenticator protected · {session.role}
@@ -102,7 +108,7 @@ export default function Account({ session }: { session: Session }) {
           Security requests are paused. Try again in {cooldown.seconds} seconds.
         </p>
       )}
-      <section className="panel">
+      <section className="panel" id="account-section-1">
         <div className="account-section-heading">
           <span className="account-step">01</span>
           <div>
@@ -250,7 +256,7 @@ export default function Account({ session }: { session: Session }) {
           </button>
         </form>
       </section>
-      <section className="panel">
+      <section className="panel" id="account-section-2">
         <div className="account-section-heading">
           <span className="account-step">02</span>
           <div>
@@ -332,7 +338,7 @@ export default function Account({ session }: { session: Session }) {
           </button>
         </form>
       </section>
-      <section className="panel">
+      <section className="panel" id="account-section-3">
         <div className="account-section-heading">
           <span className="account-step">03</span>
           <div>
@@ -401,7 +407,7 @@ export default function Account({ session }: { session: Session }) {
           </button>
         </form>
       </section>
-      <section className="panel">
+      <section className="panel" id="account-section-4">
         <div className="account-section-heading">
           <span className="account-step">04</span>
           <div>

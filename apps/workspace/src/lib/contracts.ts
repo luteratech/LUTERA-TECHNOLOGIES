@@ -90,6 +90,7 @@ export const companySchema = z
   .strict();
 export const serviceSchema = z
   .object({
+    archived: z.boolean().optional(),
     key: z.string().regex(/^[a-z][a-z0-9-]{1,39}$/),
     slug: z.string().regex(/^[a-z][a-z0-9-]{1,59}$/),
     title: required(120),
@@ -125,6 +126,10 @@ export const siteSchema = z
           new Set(list.map((s) => s.key)).size === list.length &&
           new Set(list.map((s) => s.slug)).size === list.length,
         "Service keys and slugs must be unique",
+      )
+      .refine(
+        (list) => list.some((s) => !s.archived),
+        "Keep at least one current service",
       ),
     commitments: z
       .array(

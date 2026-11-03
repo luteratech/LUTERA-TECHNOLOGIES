@@ -1,6 +1,8 @@
 "use client";
 import { useFeedback, confirmAction } from "@/lib/notifications";
 import { useEffect, useState } from "react";
+import ImageChoice from "./ImageChoice";
+import { displayLabel } from "@/lib/workspace-display";
 import { siteSchema, icons, photos, type SiteContent } from "@/lib/contracts";
 import { api, Field, Notice, type State } from "./Workspace";
 import { ConfirmDialog } from "./documents";
@@ -99,7 +101,7 @@ export default function ContentEditor({
       setMessage(
         result.live
           ? "This version is live on luteratech.com."
-          : "This version is not live yet. Check the public website’s Vercel build logs if it continues.",
+          : "This version is not live yet. Retry shortly or ask the website administrator to review the publication.",
       );
     } catch (e) {
       setMessage(e as Error);
@@ -274,22 +276,25 @@ export default function ContentEditor({
               <>
                 <h3>Company services</h3>
                 <p>
-                  Add, edit or remove services. Use plain text; links, titles
-                  and page output are escaped and validated during the public
-                  build.
+                  Keep each service clear and accurate. Archive a published
+                  service to remove it from the current listing while keeping
+                  its address available.
                 </p>
                 {value.services.map((service, index) => (
                   <details className="service-edit" key={index}>
                     <summary>
-                      {index + 1}. {service.title}
+                      {service.title}
+                      {service.archived ? " · Archived" : ""}
                     </summary>
                     <div className="form-grid">
-                      {(
-                        ["title", "key", "slug", "description", "alt"] as const
-                      ).map((key) => (
+                      {(["title", "description", "alt"] as const).map((key) => (
                         <Field
                           key={key}
-                          label={key === "alt" ? "Image description" : key}
+                          label={
+                            key === "alt"
+                              ? "Image description"
+                              : displayLabel(key)
+                          }
                         >
                           {key === "description" ? (
                             <textarea
@@ -326,29 +331,20 @@ export default function ContentEditor({
                           )}
                         </Field>
                       ))}
-                      <Field label="Image">
-                        <select
-                          value={service.image}
-                          onChange={(e) =>
-                            update({
-                              ...value,
-                              services: value.services.map((s, i) =>
-                                i === index
-                                  ? {
-                                      ...s,
-                                      image: e.target
-                                        .value as typeof service.image,
-                                    }
-                                  : s,
-                              ),
-                            })
-                          }
-                        >
-                          {photos.map((p) => (
-                            <option key={p}>{p}</option>
-                          ))}
-                        </select>
-                      </Field>
+                      <ImageChoice
+                        value={service.image}
+                        options={photos}
+                        onChange={(image) =>
+                          update({
+                            ...value,
+                            services: value.services.map((s, i) =>
+                              i === index
+                                ? { ...s, image: image as typeof s.image }
+                                : s,
+                            ),
+                          })
+                        }
+                      />
                       <Field label="Icon">
                         <select
                           value={service.icon}
@@ -368,11 +364,50 @@ export default function ContentEditor({
                           }
                         >
                           {icons.map((p) => (
-                            <option key={p}>{p}</option>
+                            <option key={p} value={p}>
+                              {displayLabel(p)}
+                            </option>
                           ))}
                         </select>
                       </Field>
                     </div>
+                    <details className="admin-disclosure">
+                      <summary>Page address & advanced settings</summary>
+                      <p>
+                        Published addresses stay fixed so existing links keep
+                        working. Archive a service to remove it from the current
+                        listing.
+                      </p>
+                      <div className="form-grid">
+                        {(["key", "slug"] as const).map((key) => (
+                          <Field
+                            label={
+                              key === "slug"
+                                ? "Page address"
+                                : "Internal service key"
+                            }
+                            key={key}
+                          >
+                            <input
+                              value={service[key]}
+                              readOnly={initial.content.services.some(
+                                (s) => s.key === service.key,
+                              )}
+                              onChange={(e) =>
+                                update({
+                                  ...value,
+                                  services: value.services.map((s, i) =>
+                                    i === index
+                                      ? { ...s, [key]: e.target.value }
+                                      : s,
+                                  ),
+                                })
+                              }
+                            />
+                          </Field>
+                        ))}
+                      </div>
+                    </details>
                     <label className="check">
                       <input
                         type="checkbox"
@@ -475,25 +510,50 @@ export default function ContentEditor({
                     <button
                       type="button"
                       className="secondary danger"
-                      disabled={value.services.length === 1}
                       onClick={async () => {
+                        const published = initial.content.services.some(
+                          (s) => s.key === service.key,
+                        );
+                        if (service.archived) {
+                          update({
+                            ...value,
+                            services: value.services.map((s, i) =>
+                              i === index ? { ...s, archived: false } : s,
+                            ),
+                          });
+                          return;
+                        }
                         if (
                           await confirmAction({
-                            title: "Remove this service?",
-                            message: `Remove ${service.title} from the website draft? Publish the draft to update the live website.`,
-                            confirmLabel: "Remove service",
+                            title: published
+                              ? "Archive this service?"
+                              : "Remove this draft service?",
+                            message: published
+                              ? "The service will leave the current listing after publication. Its existing page address will remain available."
+                              : "This removes the service from your draft.",
+                            confirmLabel: published
+                              ? "Archive service"
+                              : "Remove service",
                             danger: true,
                           })
                         )
                           update({
                             ...value,
-                            services: value.services.filter(
-                              (_, i) => i !== index,
-                            ),
+                            services: published
+                              ? value.services.map((s, i) =>
+                                  i === index ? { ...s, archived: true } : s,
+                                )
+                              : value.services.filter((_, i) => i !== index),
                           });
                       }}
                     >
-                      Remove service
+                      {service.archived
+                        ? "Restore service"
+                        : initial.content.services.some(
+                              (s) => s.key === service.key,
+                            )
+                          ? "Archive service"
+                          : "Remove service"}
                     </button>
                   </details>
                 ))}
@@ -523,8 +583,8 @@ export default function ContentEditor({
                   Add service +
                 </button>
                 <p className="muted">
-                  Changing an existing slug changes its address. Keep current
-                  slugs when possible; removed service addresses return 404.
+                  Current service addresses remain stable. Archived services
+                  keep a page that directs visitors to your current services.
                 </p>
               </>
             )}
@@ -686,33 +746,35 @@ export default function ContentEditor({
           </div>
         </form>
       )}
-      <section className="panel">
-        <h3>Publication history</h3>
-        {publications.length ? (
-          publications.slice(0, 10).map((p) => (
-            <div className="record-row" key={p.id}>
-              <div>
-                <strong>{p.status}</strong>
-                <small>
-                  {new Date(p.created_at).toLocaleString()} · {p.id}
-                </small>
+      {section === "publishing" && (
+        <section className="panel">
+          <h3>Publication history</h3>
+          {publications.length ? (
+            publications.slice(0, 10).map((p) => (
+              <div className="record-row" key={p.id}>
+                <div>
+                  <strong>{p.status}</strong>
+                  <small>
+                    {new Date(p.created_at).toLocaleString()} · {p.id}
+                  </small>
+                </div>
+                <button
+                  disabled={busy}
+                  className="secondary"
+                  onClick={() => checkLive(p.id)}
+                >
+                  Check live version
+                </button>
               </div>
-              <button
-                disabled={busy}
-                className="secondary"
-                onClick={() => checkLive(p.id)}
-              >
-                Check live version
-              </button>
-            </div>
-          ))
-        ) : (
-          <p>
-            No workspace publications yet. The existing public website remains
-            live.
-          </p>
-        )}
-      </section>
+            ))
+          ) : (
+            <p>
+              No workspace publications yet. The existing public website remains
+              live.
+            </p>
+          )}
+        </section>
+      )}
       {confirm && (
         <ConfirmDialog
           title="Publish this website draft?"

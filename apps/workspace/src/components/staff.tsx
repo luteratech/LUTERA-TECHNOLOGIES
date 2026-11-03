@@ -258,7 +258,14 @@ function Editor({
                 <Field
                   key={key}
                   label={
-                    key.replaceAll("_", " ") +
+                    {
+                      name: "Full name",
+                      title: "Job title",
+                      staff_number: "Staff number",
+                      department: "Department",
+                      email: "Email",
+                      phone: "Phone number",
+                    }[key] +
                     (["name", "title", "staff_number"].includes(key)
                       ? " *"
                       : "")
@@ -339,7 +346,7 @@ function Editor({
                 value={template}
                 onChange={(e) => setTemplate(e.target.value as "name" | "id")}
               >
-                <option value="name">Name card · 90 × 50 mm</option>
+                <option value="name">Name card · 85 × 55 mm</option>
                 <option value="id">ID card · 54 × 86 mm</option>
               </select>
             </Field>

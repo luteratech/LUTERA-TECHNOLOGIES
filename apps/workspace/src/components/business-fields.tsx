@@ -2,6 +2,14 @@
 import { useFeedback } from "@/lib/notifications";
 import { useEffect, useId, useState } from "react";
 import StatusBadge from "./StatusBadge";
+import MultiSelect from "./MultiSelect";
+import RecordLink from "./RecordLink";
+import {
+  displayLabel,
+  displayDate,
+  recordOption,
+  linkedEntities,
+} from "@/lib/workspace-display";
 import { api } from "@/lib/client";
 import { minor, money } from "@/lib/contracts";
 import { businessDate, type Area, type Entity, type Row } from "@/lib/business";
@@ -31,6 +39,9 @@ export type FieldDef = {
   area?: Area;
   parentKey?: string;
   fulfilment?: boolean;
+  step?: number | string;
+  min?: number;
+  max?: number;
 };
 export const ref = (
   key: string,
@@ -400,75 +411,181 @@ export function Reference({
   required?: boolean;
   kind?: string;
 }) {
-  const [query, setQuery] = useState(""),
-    [rows, setRows] = useState<Row[]>([]),
-    [error, setError] = useFeedback("error");
+  const [query, setQuery] = useState("");
+  const [rows, setRows] = useState<Row[]>([]);
+  const [selected, setSelected] = useState<{
+    id: string;
+    label: string;
+  } | null>(null);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [retry, setRetry] = useState(0);
   const id = useId();
   useEffect(() => {
     let active = true;
-    const t = setTimeout(() => {
-      api<{ rows: Row[] }>("business/list", {
-        entity,
-        query,
-        page: 0,
-        parent: parent || "",
-        kind: kind || "",
-        status: fulfilment ? "fulfilment" : "",
-      })
+    setLoading(true);
+    const timer = setTimeout(() => {
+      api<{ rows: Row[] }>(
+        "business/list",
+        {
+          entity,
+          query,
+          page: 0,
+          parent: parent || "",
+          kind: kind || "",
+          status: fulfilment ? "fulfilment" : "",
+        },
+        { notifications: false },
+      )
         .then((r) => {
           if (active) {
             setRows(r.rows);
             setError("");
           }
         })
-        .catch((e) => {
-          if (active) setError(e);
+        .catch(() => {
+          if (active) setError("Records could not be loaded.");
+        })
+        .finally(() => {
+          if (active) setLoading(false);
         });
     }, 200);
     return () => {
       active = false;
-      clearTimeout(t);
+      clearTimeout(timer);
     };
-  }, [entity, query, kind, parent, fulfilment]);
+  }, [entity, query, kind, parent, fulfilment, retry]);
+  useEffect(() => {
+    if (!value) {
+      setSelected(null);
+      return;
+    }
+    const row = rows.find((r) => (r.id || r.document_id) === value);
+    if (row) {
+      setSelected({ id: value, label: recordOption(row) });
+      return;
+    }
+    if (selected?.id === value) return;
+    let active = true;
+    api<{ references: Record<string, { label: string }> }>(
+      "business/references?values=" +
+        encodeURIComponent(
+          JSON.stringify([{ key: "selected", entity, id: value }]),
+        ),
+      undefined,
+      { notifications: false },
+    )
+      .then((r) => {
+        if (active && r.references.selected)
+          setSelected({ id: value, label: r.references.selected.label });
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [value, entity, rows, selected?.id]);
   return (
     <div className="reference-picker">
-      <input
-        aria-label={label ? "Search " + label : "Search linked records"}
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search by name, number or reference…"
-        aria-controls={id}
-      />
-      <select
-        aria-label={label || "Select linked record"}
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-      >
-        <option value="">Select a record</option>
-        {value && !rows.some((r) => r.id === value) && (
-          <option value={value}>Linked record · {value.slice(0, 8)}</option>
-        )}
-        {rows.map((r) => (
-          <option
-            key={r.id || String(r.document_id)}
-            value={r.id || String(r.document_id)}
-          >
-            {String(
-              r.number ||
-                r.reference ||
-                r.name ||
-                r.title ||
-                r.description ||
-                r.serial ||
-                r.id,
-            )}
-            {r.status ? " · " + r.status : ""}
+      <div className="reference-control">
+        <select
+          id={id}
+          aria-label={label || "Select linked record"}
+          value={value}
+          required={required}
+          onChange={(e) => {
+            const row = rows.find(
+              (r) => (r.id || r.document_id) === e.target.value,
+            );
+            if (row)
+              setSelected({ id: e.target.value, label: recordOption(row) });
+            onChange(e.target.value);
+            setOpen(false);
+          }}
+        >
+          <option value="">
+            {loading
+              ? "Loading records…"
+              : "Choose " + (label?.toLowerCase() || "a record")}
           </option>
-        ))}
-      </select>
+          {value && !rows.some((r) => (r.id || r.document_id) === value) && (
+            <option value={value}>
+              {selected?.id === value ? selected.label : "Selected record"}
+            </option>
+          )}
+          {rows.map((r) => (
+            <option
+              key={r.id || String(r.document_id)}
+              value={r.id || String(r.document_id)}
+            >
+              {recordOption(r)}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          className="secondary reference-search-toggle"
+          aria-label={"Find " + (label || "linked record")}
+          aria-expanded={open}
+          aria-controls={id + "-search"}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            aria-hidden="true"
+          >
+            <circle cx="10.5" cy="10.5" r="6.5" />
+            <path d="m16 16 5 5" />
+          </svg>
+        </button>
+      </div>
+      {open && (
+        <div id={id + "-search"} className="reference-search-panel">
+          <input
+            autoFocus
+            type="search"
+            aria-label={label ? "Search " + label : "Search linked records"}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Name, number or reference…"
+          />
+          <p role="status">
+            {loading
+              ? "Searching…"
+              : error ||
+                (!rows.length
+                  ? "No matching records. Try another search or create the record first."
+                  : rows.length +
+                    " matching records. Choose from the list above.")}
+          </p>
+          {error && (
+            <button
+              className="text-button"
+              type="button"
+              onClick={() => setRetry((v) => v + 1)}
+            >
+              Try again
+            </button>
+          )}
+        </div>
+      )}
+      {!open && error && (
+        <p className="form-help" role="status">
+          {error}{" "}
+          <button
+            className="text-button"
+            type="button"
+            onClick={() => setRetry((v) => v + 1)}
+          >
+            Retry
+          </button>
+        </p>
+      )}
     </div>
   );
 }
@@ -486,7 +603,8 @@ export function Evidence({
   required?: boolean;
 }) {
   const [busy, setBusy] = useState(false),
-    [error, setError] = useFeedback("error");
+    [error, setError] = useFeedback("error"),
+    [filename, setFilename] = useState("");
   return (
     <div className="evidence-field">
       {value && (
@@ -507,7 +625,7 @@ export function Evidence({
           setError("");
           try {
             if (file.size > 1048576)
-              throw new Error("Choose an image under 1 MB.");
+              throw new Error("Choose a PDF or image up to 1 MB.");
             const data = await new Promise<string>((resolve, reject) => {
               const r = new FileReader();
               r.onload = () => resolve(String(r.result).split(",")[1]);
@@ -520,6 +638,7 @@ export function Evidence({
               area,
               data,
             });
+            setFilename(file.name);
             onChange(result.id);
           } catch (err) {
             setError(err as Error);
@@ -529,6 +648,7 @@ export function Evidence({
           }
         }}
       />
+      {filename && <span className="uploaded-filename">{filename}</span>}
       <small>
         {busy
           ? "Uploading evidence…"
@@ -551,18 +671,29 @@ export function Fields({
   people?: { id: string; name: string }[];
   disabled?: boolean;
 }) {
+  const prefix = useId();
   return (
     <fieldset disabled={disabled} className="business-fields">
       <div className="form-grid">
         {fields.map((f) => (
-          <label
+          <div
             className={"field " + (f.type === "textarea" ? "full" : "")}
             key={f.key}
           >
-            <span>
-              {f.label}
-              {f.required && f.type !== "checkbox" ? " *" : ""}
-            </span>
+            {f.type !== "multi" &&
+              (["ref", "evidence"].includes(f.type || "") ? (
+                <span>
+                  {f.label.replace(/\s*\*+$/, "")}
+                  {f.required ? " *" : ""}
+                </span>
+              ) : (
+                <label htmlFor={`${prefix}-${f.key}`}>
+                  <span>
+                    {f.label.replace(/\s*\*+$/, "")}
+                    {f.required && f.type !== "checkbox" ? " *" : ""}
+                  </span>
+                </label>
+              ))}
             {f.type === "ref" ? (
               <Reference
                 entity={f.entity!}
@@ -578,6 +709,7 @@ export function Fields({
               />
             ) : f.type === "person" ? (
               <select
+                id={`${prefix}-${f.key}`}
                 value={String(values[f.key] || "")}
                 onChange={(e) => onChange(f.key, e.target.value)}
               >
@@ -596,40 +728,24 @@ export function Fields({
                 required={f.required}
               />
             ) : f.type === "multi" ? (
-              <select
-                multiple
-                aria-label={f.label}
+              <MultiSelect
+                label={f.label}
                 value={
                   Array.isArray(values[f.key])
                     ? (values[f.key] as string[])
                     : []
                 }
-                onChange={(e) =>
-                  onChange(
-                    f.key,
-                    Array.from(e.target.selectedOptions, (o) => o.value),
-                  )
-                }
-              >
-                {f.options?.map((o) => (
-                  <option key={o} value={o}>
-                    {(
-                      {
-                        procurement: "IT procurement & sourcing",
-                        hardware: "Computer hardware",
-                        consulting: "Technology consulting",
-                        support: "Installation & support",
-                        ai: "AI & automation",
-                        software: "Software development",
-                        data: "Data analytics",
-                        cloud: "Cloud & integration",
-                      } as Record<string, string>
-                    )[o] || o}
-                  </option>
-                ))}
-              </select>
+                options={(f.options || []).map((value) => ({
+                  value,
+                  label: displayLabel(value),
+                }))}
+                onChange={(v) => onChange(f.key, v)}
+                required={f.required}
+                disabled={disabled}
+              />
             ) : f.type === "select" ? (
               <select
+                id={`${prefix}-${f.key}`}
                 aria-label={f.label}
                 required={f.required}
                 value={String(values[f.key] || "")}
@@ -638,12 +754,13 @@ export function Fields({
                 {!f.required && <option value="">Not specified</option>}
                 {f.options?.map((o) => (
                   <option key={o} value={o}>
-                    {o.replaceAll("_", " ")}
+                    {displayLabel(o)}
                   </option>
                 ))}
               </select>
             ) : f.type === "textarea" ? (
               <textarea
+                id={`${prefix}-${f.key}`}
                 rows={3}
                 required={f.required}
                 maxLength={6000}
@@ -652,6 +769,7 @@ export function Fields({
               />
             ) : f.type === "checkbox" ? (
               <input
+                id={`${prefix}-${f.key}`}
                 type="checkbox"
                 checked={Boolean(values[f.key])}
                 required={f.required}
@@ -659,6 +777,7 @@ export function Fields({
               />
             ) : (
               <input
+                id={`${prefix}-${f.key}`}
                 type={
                   f.type === "money" || f.type === "rate"
                     ? "text"
@@ -671,85 +790,166 @@ export function Fields({
                 }
                 required={f.required}
                 maxLength={f.type === "email" ? 254 : 600}
-                min={f.type === "number" ? 0 : undefined}
+                min={f.min ?? (f.type === "number" ? 0 : undefined)}
+                max={f.max}
+                step={f.step ?? (f.type === "number" ? 1 : undefined)}
                 value={String(values[f.key] ?? "")}
                 onChange={(e) => onChange(f.key, e.target.value)}
               />
             )}
-          </label>
+          </div>
         ))}
       </div>
     </fieldset>
   );
 }
 export function Summary({ row }: { row: Row }) {
+  const [names, setNames] = useState<
+    Record<string, { label: string; entity: string; id: string; kind?: string }>
+  >({});
+  const refs = Object.entries(row).filter(
+    ([key, value]) => value && linkedEntities[key],
+  );
+  const refKey = refs.map(([key, value]) => key + ":" + value).join("|");
+  useEffect(() => {
+    if (!refs.length) {
+      setNames({});
+      return;
+    }
+    let active = true;
+    api<{ references: typeof names }>(
+      "business/references?values=" +
+        encodeURIComponent(
+          JSON.stringify(
+            refs
+              .slice(0, 20)
+              .map(([key, id]) => ({ key, id, entity: linkedEntities[key] })),
+          ),
+        ),
+      undefined,
+      { notifications: false },
+    )
+      .then((r) => {
+        if (active) setNames(r.references || {});
+      })
+      .catch(() => {
+        if (active) setNames({});
+      });
+    return () => {
+      active = false;
+    };
+  }, [refKey]);
+  const internal = new Set([
+    "id",
+    "version",
+    "snapshot",
+    "request_key",
+    "sha256",
+    "path",
+    "created_by",
+    "updated_by",
+    "owner_id",
+    "lease_id",
+    "provider_id",
+  ]);
   const entries = Object.entries(row).filter(
     ([k, v]) =>
-      !["id", "version", "snapshot", "request_key", "sha256", "path"].includes(
-        k,
-      ) &&
-      v !== null &&
+      !internal.has(k) &&
+      !k.endsWith("_id") &&
+      k !== "assigned_to" &&
+      v != null &&
       v !== "" &&
-      typeof v !== "object",
-  );
-  const references = entries.filter(
-    ([k]) => k.endsWith("_id") || k === "created_by" || k === "assigned_to",
+      (typeof v !== "object" || Array.isArray(v)),
   );
   return (
     <>
       <dl className="record-summary">
-        {entries
-          .filter(([k]) => !references.some(([r]) => r === k))
-          .map(([k, v]) => (
-            <div key={k}>
-              <dt>{k.replaceAll("_", " ")}</dt>
-              <dd
-                className={
-                  typeof v === "number" ||
-                  /(?:reference|number|serial|sku|code)$/.test(k)
-                    ? "numeric"
-                    : undefined
+        {entries.map(([key, value]) => (
+          <div key={key}>
+            <dt>{displayLabel(key)}</dt>
+            <dd
+              className={
+                typeof value === "number" ||
+                /(reference|number|serial|sku)$/.test(key)
+                  ? "numeric"
+                  : undefined
+              }
+            >
+              {["status", "stage", "outcome"].includes(key) ? (
+                <StatusBadge status={String(value)} />
+              ) : key.endsWith("_minor") ? (
+                money(Number(value), String(row.currency || "NGN"))
+              ) : key.endsWith("_bps") ? (
+                `${Number(value) / 100}%`
+              ) : key.endsWith("_micros") ? (
+                (Number(value) / 1000000).toLocaleString("en-NG")
+              ) : typeof value === "boolean" ? (
+                value ? (
+                  "Yes"
+                ) : (
+                  "No"
+                )
+              ) : Array.isArray(value) ? (
+                value.map((v) => displayLabel(String(v))).join(", ")
+              ) : /(_on|_date|_at)$/.test(key) ? (
+                displayDate(String(value), key.endsWith("_at"))
+              ) : key === "kind" || key === "category" ? (
+                displayLabel(String(value))
+              ) : (
+                String(value)
+              )}
+            </dd>
+          </div>
+        ))}
+        {refs.map(([key]) => (
+          <div key={key}>
+            <dt>{displayLabel(key)}</dt>
+            <dd>
+              {names[key]?.entity === "person" ? (
+                names[key].label
+              ) : names[key] ? (
+                <RecordLink
+                  entity={names[key].entity}
+                  id={names[key].id}
+                  kind={names[key].kind}
+                >
+                  {names[key].label}
+                </RecordLink>
+              ) : (
+                "Record unavailable"
+              )}
+            </dd>
+          </div>
+        ))}
+        {Boolean(row.evidence_id) && (
+          <div>
+            <dt>Supporting evidence</dt>
+            <dd>
+              <a
+                href={
+                  "/api/business/file?id=" +
+                  encodeURIComponent(String(row.evidence_id))
                 }
               >
-                {k === "status" ? (
-                  <StatusBadge status={String(v)} />
-                ) : k.endsWith("_minor") ? (
-                  money(Number(v), String(row.currency || "NGN"))
-                ) : typeof v === "boolean" ? (
-                  v ? (
-                    "Yes"
-                  ) : (
-                    "No"
-                  )
-                ) : (
-                  String(v)
-                )}
-              </dd>
-            </div>
-          ))}
+                View evidence ↗
+              </a>
+            </dd>
+          </div>
+        )}
       </dl>
-      {references.length > 0 && (
-        <details className="record-references">
-          <summary>Linked record references</summary>
-          <dl className="record-summary">
-            {references.map(([k, v]) => (
+      <details className="record-references">
+        <summary>Technical references</summary>
+        <dl className="record-summary">
+          {Object.entries(row)
+            .filter(([k, v]) => (k === "id" || k.endsWith("_id")) && v)
+            .map(([k, v]) => (
               <div key={k}>
-                <dt>{k.replaceAll("_", " ")}</dt>
-                <dd
-                  className={
-                    typeof v === "number" ||
-                    /(?:reference|number|serial|sku|code)$/.test(k)
-                      ? "numeric"
-                      : undefined
-                  }
-                >
-                  {String(v)}
-                </dd>
+                <dt>{displayLabel(k)}</dt>
+                <dd className="document-reference">{String(v)}</dd>
               </div>
             ))}
-          </dl>
-        </details>
-      )}
+        </dl>
+      </details>
     </>
   );
 }

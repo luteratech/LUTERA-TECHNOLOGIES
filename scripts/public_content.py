@@ -40,13 +40,15 @@ def validate(site):
     services = site['services']
     require(isinstance(services,list) and 1 <= len(services) <= 30, 'Include 1–30 services')
     for s in services:
-        require(isinstance(s,dict) and {'key','slug','title','icon','image','alt','description'} <= set(s) and set(s) <= {'key','slug','title','icon','image','alt','description','detail'}, 'Invalid service fields')
+        require(isinstance(s,dict) and {'key','slug','title','icon','image','alt','description'} <= set(s) and set(s) <= {'key','slug','title','icon','image','alt','description','detail','archived'}, 'Invalid service fields')
+        require('archived' not in s or isinstance(s['archived'],bool), 'Invalid archive status')
         require(bool(re.fullmatch('[a-z][a-z0-9-]{1,39}',s['key'])) and bool(re.fullmatch('[a-z][a-z0-9-]{1,59}',s['slug'])), 'Invalid service key or address')
         require(s['icon'] in ICONS and s['image'] in PHOTOS, 'Unknown image or icon')
         require(string(s['title'],120,1) and string(s['alt'],220,1) and string(s['description'],800,1), 'Invalid service description')
         if 'detail' in s:
             d=s['detail']
             require(isinstance(d,dict) and set(d)=={'heading','body','points'} and string(d['heading'],160,1) and string(d['body'],5000,1) and isinstance(d['points'],list) and 1<=len(d['points'])<=12 and all(string(p,300,1) for p in d['points']), 'Invalid custom service page')
+    require(any(not s.get('archived') for s in services), 'Keep at least one current service')
     require(len({s['key'] for s in services}) == len(services) == len({s['slug'] for s in services}), 'Duplicate service key or address')
     require(isinstance(site['commitments'],list) and 1<=len(site['commitments'])<=8, 'Include 1–8 commitments')
     for item in site['commitments']:
