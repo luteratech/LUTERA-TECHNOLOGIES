@@ -115,15 +115,18 @@ subsequently ran a successful manual primary backup on **2 November at
 15:20 UTC**; its Drive receipt is pending. Unattended weekly execution still
 requires a successful scheduled run.
 
-**One-time company Google authorization is still required for weekly Drive
-copies.** The chat's Google connector cannot supply an unattended Vercel identity.
+**One-time company Google authorization is required when installing or repairing weekly Drive
+copies.** The owner reports completing installation on 3 November; the 2 November
+snapshot now has a verified Drive receipt. A newer primary snapshot is still
+pending its copy at review time. Scheduled execution must still be observed. The chat's Google connector cannot supply an unattended Vercel identity.
 A company-owned Apps Script provides this authorization without sharing the
 backup encryption key with Google or placing credentials in source code:
 
-1. Sign in through the existing private staff entry. Open **Operations settings**.
-   Select **Run backup now**, wait for a successful primary result and review its
+1. Sign in through the existing private staff entry. Open **Administration → Backups & recovery**.
+   Select **Create backup**, wait for a successful primary result and review its
    date before proceeding. A failed run needs investigation; do not mark it done.
-   Download **Drive connection** and **Recovery key**. Store the recovery key in
+   Under **Backup tools**, expand **Manage Google Drive connection** for the connection
+   download and **Recovery tools** for **Recovery key**. Store the recovery key in
    the company password manager, separate from the backup folder. Do not post
    either file in chat or Git.
 2. Signed in as **luteratech2@gmail.com**, which owns the backup folder, open
@@ -136,8 +139,8 @@ backup encryption key with Google or placing credentials in source code:
    request permissions. This copies outstanding primary snapshots and installs a
    weekly Monday trigger around **10:00 Africa/Lagos**. Google may require an owner review
    of the private script before granting these permissions.
-5. Confirm the encrypted file exists in the company folder and that Operations
-   settings shows a **complete** backup with its Drive receipt. A **primary**
+5. Confirm the encrypted file exists in the company folder and that Backups & recovery
+   shows a **complete** backup with its Drive receipt. A **primary**
    status means the off-site copy is still outstanding. Failure emails from Apps
    Script go to its owning Google account; also review workspace backup health.
 

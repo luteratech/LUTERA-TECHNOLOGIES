@@ -77,12 +77,12 @@ emails are required by these checks.
 
 ## Remaining owner/provider setup
 
-1. **Google Drive:** install and authorize the company-account Apps Script trigger
-   described in the [operations runbook](business-workspace-operations.md#encrypted-backups-supabase-then-google-drive).
-   The company destination is now verified as **luteratech2@gmail.com**. A
-   checksum-verified 23 October encrypted snapshot has been copied there; a
-   fresh primary run and the daily Drive trigger still need verification.
-   Supabase remains primary. See the runbook for the one-time authorization.
+1. **Google Drive:** the owner reports successful company Apps Script authorization
+   and a completed run on 3 November. The 2 November snapshot has a verified Drive
+   receipt; the newer 3 November snapshot is primary-only at review time. Observe
+   the first unattended weekly Monday trigger before declaring the schedule verified.
+   Supabase remains primary. Backup status, history, connection and recovery tools
+   now live in **Administration → Backups & recovery**.
 2. **Website publishing hook:** confirmed present in the private project's
    production environment on 27 October. The contact/navigation release deploys
    with this setting. A signed-in draft → Publish → live-revision acceptance

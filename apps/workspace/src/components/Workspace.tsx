@@ -56,6 +56,15 @@ const BusinessAdministration = dynamic(
   () => import("./BusinessAdministration"),
   { loading: () => <p role="status">Loading section…</p> },
 );
+const BusinessIntegrations = dynamic(() => import("./BusinessIntegrations"), {
+  loading: () => <p role="status">Loading connections…</p>,
+});
+const BusinessPolicy = dynamic(() => import("./BusinessPolicy"), {
+  loading: () => <p role="status">Loading policy…</p>,
+});
+const BusinessBackups = dynamic(() => import("./BusinessBackups"), {
+  loading: () => <p role="status">Loading backups…</p>,
+});
 import BusinessWorkspace, {
   BusinessDashboard,
   type BusinessConfig,
@@ -258,6 +267,8 @@ export default function Workspace() {
       members: "members",
       "business-access": "members",
       "business-settings": "members",
+      "business-integrations": "members",
+      "business-policy": "members",
       audit: "audit",
       backup: "backup",
       reports: "finance",
@@ -278,6 +289,8 @@ export default function Workspace() {
     staff: "Staff profiles & cards",
     settings: "Company document settings",
     "business-settings": "Operations settings",
+    "business-integrations": "Integrations",
+    "business-policy": "Retention & recovery policy",
     members: "User access",
     audit: "Activity history",
     backup: "Backups & recovery",
@@ -386,13 +399,22 @@ export default function Workspace() {
         </nav>
         <div className="page-heading">
           <div>
-            <p className="eyebrow">Lutera Technology Ltd</p>
+            {departmentId !== "administration" && (
+              <p className="eyebrow">Lutera Technology Ltd</p>
+            )}
             <h1>{title}</h1>
           </div>
           <button
             className="secondary"
             onClick={async () => {
-              if (await mayLeave()) refresh().catch((e) => setError(e));
+              if (await mayLeave()) {
+                try {
+                  await refresh();
+                  setNavigationVersion((v) => v + 1);
+                } catch (e) {
+                  setError(e as Error);
+                }
+              }
             }}
           >
             Refresh
@@ -524,8 +546,10 @@ export default function Workspace() {
             {tab === "controls" && <OperationsDesk department={departmentId} />}
             {tab === "audit" && <BusinessActivity />}
             {tab === "business-settings" && <BusinessAdministration />}
+            {tab === "business-integrations" && <BusinessIntegrations />}
+            {tab === "business-policy" && <BusinessPolicy />}
             {tab === "reports" && <BusinessReports />}
-            {tab === "backup" && <Backups />}
+            {tab === "backup" && <BusinessBackups />}
             {tab === "account" && (
               <>
                 <section className="panel">
@@ -1055,71 +1079,5 @@ function Members({
         ))}
       </section>
     </>
-  );
-}
-function Backups() {
-  const [busy, setBusy] = useState(false),
-    [message, setMessage] = useFeedback();
-  return (
-    <form
-      className="panel"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        const form = e.currentTarget,
-          values = new FormData(form);
-        if (values.get("password") !== values.get("confirmation")) {
-          setMessage(new Error("Backup passwords must match"));
-          return;
-        }
-        setBusy(true);
-        setMessage("");
-        try {
-          await saveFile("backup", { password: values.get("password") });
-          form.reset();
-          setMessage(
-            "Encrypted backup downloaded. Keep it in a company-controlled backup location and store its password separately.",
-          );
-        } catch (error) {
-          setMessage(error as Error);
-        } finally {
-          setBusy(false);
-        }
-      }}
-    >
-      <h2>Download an encrypted records backup</h2>
-      <p>
-        Includes documents, staff photos, content, access rules, numbering
-        counters and activity history. Passwords and authenticator secrets are
-        excluded. This manual export complements the project’s database backup
-        policy.
-      </p>
-      <div className="form-grid">
-        <PasswordInput
-          label="Backup password (at least 16 characters)"
-          name="password"
-          minLength={16}
-          maxLength={256}
-          required
-          autoComplete="new-password"
-        />
-        <PasswordInput
-          label="Confirm backup password"
-          name="confirmation"
-          minLength={16}
-          maxLength={256}
-          required
-          autoComplete="new-password"
-        />
-      </div>
-      <button disabled={busy}>
-        {busy ? "Encrypting backup…" : "Download encrypted backup"}
-      </button>
-
-      <p className="muted">
-        Keep the password safe: it cannot be recovered. Restore procedures and a
-        local backup-verification tool are included in the deployment runbook.
-        Automatic off-site backups require a company storage destination.
-      </p>
-    </form>
   );
 }

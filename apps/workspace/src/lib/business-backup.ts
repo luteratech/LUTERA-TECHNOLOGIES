@@ -43,10 +43,7 @@ export function backupConfiguration() {
       dateStyle: "medium",
       timeStyle: "short",
     }),
-    google_drive_automation:
-      "Requires company Apps Script authorization; inspect the latest copy receipt",
     drive_copy_connection: !!process.env.DRIVE_BACKUP_SECRET,
-    backup_folder: "https://drive.google.com/drive/folders/" + BACKUP_FOLDER,
   };
 }
 export async function runBusinessBackup() {
@@ -122,6 +119,6 @@ export async function runBusinessBackup() {
     primary_created: !!started,
     offsite_pending: pending.length,
     copy_method:
-      "Company Google Apps Script; confirm the Drive copy status in Operations settings.",
+      "Company Google Apps Script; confirm the Drive copy status in Backups & recovery.",
   };
 }

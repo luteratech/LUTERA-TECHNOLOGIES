@@ -31,18 +31,17 @@ with sync_playwright() as p:
  browser=p.chromium.launch(executable_path=shutil.which('chromium')or None,headless=True,args=['--no-sandbox'])
  c=browser.new_context(viewport={'width':1280,'height':900});page=c.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
  page.on('dialog',lambda d:errors.append('Native dialog: '+d.type))
- c.route('**/api/**',fixture);page.goto(origin+'/'+entry+'?section=business-settings')
- page.get_by_role('heading',name='Business operations settings',exact=True).wait_for()
- page.get_by_text('Backup and accounting arrangements',exact=True).click()
+ c.route('**/api/**',fixture);page.goto(origin+'/'+entry+'?section=backup')
+ page.get_by_role('heading',name='Your backup status',exact=True).wait_for()
  page.get_by_text('What is included in the backup?',exact=True).click()
  page.get_by_text('Auth passwords, MFA secrets',exact=False).wait_for()
- button=page.get_by_role('button',name='Run backup now',exact=True);button.click()
+ button=page.get_by_role('button',name='Create backup',exact=True);button.click()
  region=page.get_by_role('region',name='Workspace notifications',exact=True)
  region.get_by_text('Creating backup',exact=True).wait_for();expect(page.get_by_role('button',name='Creating backup…',exact=True)).to_be_disabled()
  page.wait_for_function('document.querySelector("[aria-busy=true]")!==null')
  assert len(pending)==1
  page.get_by_role('button',name='Creating backup…',exact=True).evaluate('el=>el.click()');assert calls.count('business/backup-run')==1
- field=page.get_by_label('Minimum reminder period in days',exact=True);field.focus()
+ field=page.get_by_role('link',name=re.compile('^Open backup folder'));field.focus()
  latest={'id':'00000000-0000-4000-8000-000000000001','day':datetime.now(timezone.utc).date().isoformat(),'status':'primary','created_at':datetime.now(timezone.utc).isoformat(),'bytes':100,'file_count':0}
  pending.pop(0).fulfill(status=200,content_type='application/json',body=json.dumps({'configured':True,'primary_created':True,'offsite_pending':1,'latest':latest}))
  region.get_by_text('Backup saved to Supabase',exact=True).wait_for();expect(field).to_be_focused()
@@ -58,6 +57,8 @@ with sync_playwright() as p:
  pending.pop(0).fulfill(status=200,content_type='application/json',body=json.dumps({'configured':True,'primary_created':False,'offsite_pending':1,'latest':latest}))
  region.get_by_text("Today's backup already exists",exact=True).wait_for();expect(region.locator('article')).to_have_count(1)
  # Required/range validation uses application UI and focuses the actual field.
+ page.locator('#workspace-navigation').get_by_role('button',name='Operations settings',exact=True).click()
+ field=page.get_by_label('Minimum reminder period in days',exact=True)
  field.fill('0');page.get_by_role('button',name='Save reminder settings',exact=True).click()
  region.get_by_text('Check the form',exact=True).wait_for();expect(field).to_be_focused();assert field.get_attribute('aria-invalid')=='true'
  field.fill('7');assert field.get_attribute('aria-invalid')is None
@@ -73,6 +74,7 @@ with sync_playwright() as p:
  expect(history).to_be_visible();expect(history).to_contain_text('Synthetic backup failure');history.press('Escape');expect(history).not_to_be_visible()
  # Notifications and private history clear on sign-out.
  page.set_viewport_size({'width':1280,'height':900});page.get_by_role('button',name='Sign out',exact=True).click()
+ page.get_by_role('dialog').get_by_role('button',name='Discard changes',exact=True).click()
  page.get_by_role('heading',name='Welcome back.',exact=True).wait_for();expect(region.locator('article')).to_have_count(0)
  page.get_by_role('button',name='Notifications',exact=True).click();page.get_by_text('No notifications yet.',exact=True).wait_for()
  page.goto(origin+'/portal');page.get_by_role('heading',name='Sign in to view shared documents.',exact=True).wait_for();expect(region.locator('article')).to_have_count(0)

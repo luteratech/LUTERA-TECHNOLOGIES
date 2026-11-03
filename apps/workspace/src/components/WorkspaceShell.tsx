@@ -152,6 +152,10 @@ export default function WorkspaceShell({
             {email}
             <small>{role}</small>
           </span>
+          <span
+            id="workspace-notification-slot"
+            className="workspace-notifications"
+          />
           <button className="secondary" onClick={onSignout} disabled={busy}>
             Sign out
           </button>

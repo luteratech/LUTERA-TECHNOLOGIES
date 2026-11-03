@@ -3,15 +3,17 @@
 Use **luteratech2@gmail.com** throughout. The private company backup folder is:
 https://drive.google.com/drive/folders/1M5R-up413YeEzlRudOPObu2f258gkktD
 
-The encrypted 23 October snapshot has been copied to this folder and its
-SHA-256 verified after download. A new manual primary backup succeeded on
-**2 November 2026 at 15:20 UTC** in Supabase; its Drive copy is still pending.
-This does not verify unattended weekly execution. Supabase remains primary.
+A company Drive copy of the 2 November snapshot was verified on **3 November
+2026 at 11:51 Abuja time**. A newer Supabase snapshot from **3 November at 11:59 Abuja time**
+was awaiting its Drive receipt at review time. The owner reports a successful
+script installation/run; unattended weekly execution still needs observation.
+Supabase remains primary.
 
-1. In the private Lutera workspace, open **Operations settings**. Choose
-   **Run backup now** and review the result and latest primary backup date.
+1. In the private Lutera workspace, open **Administration → Backups & recovery**. Choose
+   **Create backup** and review the result and latest primary backup date.
    If it fails, resolve that failure before relying on the schedule.
-2. Download **Drive connection**. Download **Recovery key** separately and keep
+2. Expand **Backup tools → Manage Google Drive connection** and download
+   **Drive connection**. Under **Recovery tools**, download **Recovery key** separately and keep
    that key in the company password manager. Do not place either download in
    this Drive folder, chat, GitHub or the script source.
 3. In a browser signed in as **luteratech2@gmail.com**, open
@@ -26,7 +28,7 @@ This does not verify unattended weekly execution. Supabase remains primary.
    an unfamiliar app or a different script. This copies pending encrypted files
    and installs the weekly Monday copy trigger around **10:00 Africa/Lagos**.
 7. Check Apps Script → Triggers and Executions. Confirm a new encrypted file is
-   in the company folder and **Operations settings** has a matching complete
+   in the company folder and **Administration → Backups & recovery** has a matching complete
    backup/Drive receipt. Verify the following scheduled Monday as well. A primary
    status alone means the Drive copy remains outstanding.
 
@@ -38,7 +40,7 @@ The copy script verifies SHA-256 before and after storage, retries by exact
 filename, and records only a matching receipt. No automatic deletion is enabled.
 The encryption key stays separate from Drive. Chat's connected Drive profile
 allows authorized file operations but does not grant an unattended Apps Script
-execution identity; the one-time company-account authorization is still needed.
+execution identity; a new script installation requires one-time company-account authorization.
 
 A successful copy is not a disaster-recovery drill. See
 `docs/business-workspace-operations.md` for coverage, limits and isolated restore

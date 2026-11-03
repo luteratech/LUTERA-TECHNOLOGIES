@@ -1,328 +1,170 @@
 "use client";
-import { useFeedback, appNotice, dismissNotice } from "@/lib/notifications";
-import { backupFeedback, type BackupResult } from "@/lib/backup-feedback";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/client";
+import { useFeedback } from "@/lib/notifications";
+import { useUnsavedChanges } from "@/lib/unsaved";
+import type { AutomationSettings } from "@/lib/operations-health";
 import BusinessCalendar from "./BusinessCalendar";
-import BusinessPolicy from "./BusinessPolicy";
-import { api, saveFile } from "@/lib/client";
-type Automation = {
-  id: number;
-  version: number;
-  invoice_reminders: boolean;
-  maintenance_reminders: boolean;
-  enquiry_reminders: boolean;
-  warranty_reminders: boolean;
-  visit_reminders: boolean;
-  delivery_notices: boolean;
 
-  interval_days: number;
-};
+const reminderOptions = [
+  [
+    "invoice_reminders",
+    "Overdue invoices",
+    "Email customers about unpaid invoices after their agreed due date.",
+  ],
+  [
+    "delivery_notices",
+    "Dispatch updates",
+    "Email customers when a delivery is recorded as dispatched.",
+  ],
+  [
+    "enquiry_reminders",
+    "Enquiry follow-ups",
+    "Remind Lutera to follow up on open enquiries.",
+  ],
+  [
+    "maintenance_reminders",
+    "Maintenance renewals",
+    "Notify Lutera when maintenance is due for renewal.",
+  ],
+  [
+    "warranty_reminders",
+    "Warranty reviews",
+    "Remind Lutera to review equipment warranties.",
+  ],
+  [
+    "visit_reminders",
+    "Maintenance visits",
+    "Remind Lutera about scheduled maintenance visits.",
+  ],
+] as const;
+
 export default function BusinessAdministration() {
-  const [settings, setSettings] = useState<Automation | null>(null),
-    [health, setHealth] = useState<Record<string, unknown> | null>(null),
-    [message, setMessage] = useFeedback(),
-    [busy, setBusy] = useState(false),
-    [backupBusy, setBackupBusy] = useState(false),
-    [backupResult, setBackupResult] = useState<ReturnType<
-      typeof backupFeedback
-    > | null>(null);
-  const backupLock = useRef(false),
-    lastBackupNotice = useRef<string | undefined>(undefined);
-  const load = async (notifications = true) => {
-    const r = await api<{
-      automation: Automation;
-      health: Record<string, unknown>;
-    }>("business/health", undefined, { notifications });
-    setSettings(r.automation);
-    setHealth(r.health);
-  };
+  const [settings, setSettings] = useState<AutomationSettings | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [, setMessage] = useFeedback();
+  useUnsavedChanges(dirty);
+  const load = () =>
+    api<{ automation: AutomationSettings }>("business/health")
+      .then((r) => {
+        setSettings(r.automation);
+        setFailed(false);
+      })
+      .catch((e) => {
+        setFailed(true);
+        setMessage(e);
+      });
   useEffect(() => {
-    load().catch((e) => setMessage(e));
+    void load();
   }, []);
   return (
-    <section className="panel">
-      <h2>Business operations settings</h2>
-      {message && null}
-      {health && (
-        <dl className="record-summary">
-          {Object.entries(health).map(([k, v]) => (
-            <div key={k}>
-              <dt>{k.replaceAll("_", " ")}</dt>
-              <dd>
-                {typeof v === "boolean"
-                  ? v
-                    ? "Configured"
-                    : "Needs setup"
-                  : typeof v === "object"
-                    ? JSON.stringify(v)
-                    : String(v)}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      )}
-      {settings && (
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            setBusy(true);
-            try {
-              const r = await api<Automation>("business/automation", settings);
-              setSettings(r);
-              setMessage(
-                "Automation settings saved. Enabled reminders are checked daily against current records.",
-              );
-            } catch (e) {
-              setMessage(e as Error);
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          <h3>Approved reminders</h3>
-          <p>
-            Enable external invoice reminders only after reviewing customer
-            contacts and opening balances. Maintenance reminders go to Lutera’s
-            monitored company inbox.
-          </p>
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={settings.invoice_reminders}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  invoice_reminders: e.target.checked,
-                })
-              }
-            />
-            Email reminders for overdue invoices
-          </label>
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={settings.maintenance_reminders}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  maintenance_reminders: e.target.checked,
-                })
-              }
-            />
-            Notify Lutera about maintenance renewals
-          </label>
-          {(
-            [
-              ["enquiry_reminders", "Internal enquiry follow-up reminders"],
-              ["warranty_reminders", "Internal warranty review reminders"],
-              [
-                "visit_reminders",
-                "Internal scheduled maintenance visit reminders",
-              ],
-              ["delivery_notices", "Email customers when dispatch is recorded"],
-            ] as const
-          ).map(([key, label]) => (
-            <label className="check" key={key}>
-              <input
-                type="checkbox"
-                checked={!!settings[key]}
-                onChange={(e) =>
-                  setSettings({ ...settings, [key]: e.target.checked })
-                }
-              />
-              {label}
-            </label>
-          ))}
-          <label className="field">
-            <span>Minimum reminder period in days</span>
-            <input
-              type="number"
-              min={1}
-              max={90}
-              required
-              value={settings.interval_days}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  interval_days: Number(e.target.value),
-                })
-              }
-            />
-          </label>
-          <button disabled={busy}>Save reminder settings</button>
-        </form>
-      )}
-      <BusinessCalendar />
-      <BusinessPolicy />
-      <details className="ops-gap">
-        <summary>Backup and accounting arrangements</summary>
-        <p>
-          Encrypted backups are scheduled every 7 days: Monday at 08:00
-          Africa/Lagos, to a private Supabase bucket. Check the latest
-          successful backup date in Operations health before relying on the
-          schedule. Google Drive copies run after company Google background
-          authorization is configured. A primary copy remains available if the
-          Drive copy fails. Backups are retained until Lutera approves its
-          retention policy; no automatic deletion is enabled. Download the
-          recovery key and keep it in the company password manager, separate
-          from the backup files.
-        </p>
-        <details className="ops-gap">
-          <summary>What is included in the backup?</summary>
-          <ul>
-            <li>
-              Customers, suppliers, enquiries, quotations, invoices, receipts,
-              purchases and manual payment records.
-            </li>
-            <li>
-              Accounting journals, chart of accounts, opening setup, period
-              controls, bank matching, approvals and signatures.
-            </li>
-            <li>
-              Stock, deliveries, assets, projects, tasks, support and
-              maintenance records.
-            </li>
-            <li>
-              Saved website content and drafts; staff profiles, workspace roles,
-              permissions, company settings and audit history.
-            </li>
-            <li>
-              Uploaded evidence, staff photos, profile avatars and
-              customer-portal evidence in the four private file buckets.
-            </li>
-            <li>
-              Document numbering and request history needed to prevent duplicate
-              processing.
-            </li>
-          </ul>
-          <p>
-            Only saved data is included. Auth passwords, MFA secrets, login
-            sessions, hosting credentials and unsaved edits are excluded. Source
-            code, logos and templates remain versioned in GitHub; provider-level
-            database/Auth recovery is separate.
-          </p>
-        </details>
-        <div className="actions">
-          <button
-            disabled={busy || backupBusy}
-            aria-busy={backupBusy}
-            onClick={async () => {
-              if (backupLock.current) return;
-              backupLock.current = true;
-              setBackupBusy(true);
-              setBackupResult(null);
-              if (lastBackupNotice.current)
-                dismissNotice(lastBackupNotice.current);
-              const noticeId = crypto.randomUUID();
-              lastBackupNotice.current = noticeId;
-              appNotice(
-                "Creating and verifying the encrypted primary backup. You can keep working while it runs.",
-                "loading",
-                { id: noticeId, title: "Creating backup" },
-              );
-              try {
-                const result = await api<BackupResult>(
-                  "business/backup-run",
-                  { confirmed: true },
-                  { notifications: false },
-                );
-                const feedback = backupFeedback(result);
-                setBackupResult(feedback);
-                appNotice(feedback.message, feedback.tone, {
-                  id: noticeId,
-                  title: feedback.title,
-                });
-                try {
-                  await load(false);
-                } catch {
-                  appNotice(
-                    "The backup result was received, but the health panel could not refresh. Reload Operations settings to review its latest status.",
-                    "error",
-                    { title: "Health panel needs refresh" },
-                  );
-                }
-              } catch (error) {
-                const feedback = {
-                  tone: "error" as const,
-                  title: "Backup result could not be confirmed",
-                  message:
-                    (error as Error).message +
-                    " Check the latest backup status before retrying.",
-                };
-                setBackupResult(feedback);
-                appNotice(feedback.message, "error", {
-                  id: noticeId,
-                  title: feedback.title,
-                });
-              } finally {
-                backupLock.current = false;
-                setBackupBusy(false);
-              }
-            }}
-          >
-            {backupBusy ? (
-              <>
-                <span className="app-spinner" aria-hidden="true" /> Creating
-                backup…
-              </>
-            ) : (
-              "Run backup now"
-            )}
-          </button>
-          <button
-            className="secondary"
-            disabled={busy}
-            onClick={async () => {
-              try {
-                await saveFile("business/backup-recovery-key", {
-                  confirmed: true,
-                });
-              } catch (e) {
-                setMessage(e as Error);
-              }
-            }}
-          >
-            Download recovery key
-          </button>
-          <button
-            className="secondary"
-            disabled={busy}
-            onClick={async () => {
-              try {
-                await saveFile("business/backup-drive-setup", {
-                  confirmed: true,
-                });
-              } catch (e) {
-                setMessage(e as Error);
-              }
-            }}
-          >
-            Download Drive connection
-          </button>
-          <a
-            href="https://drive.google.com/drive/folders/1M5R-up413YeEzlRudOPObu2f258gkktD"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Company backup folder ↗
-          </a>
+    <div className="admin-layout">
+      <section className="panel admin-panel" aria-labelledby="reminder-heading">
+        <div className="admin-section-heading">
+          <div>
+            <h2 id="reminder-heading">Reminders & updates</h2>
+            <p>
+              Choose which messages Lutera sends to customers and your team.
+            </p>
+          </div>
         </div>
-        {backupResult && (
-          <div
-            className={backupResult.tone === "error" ? "error" : "notice"}
-            data-backup-result
-          >
-            <strong>{backupResult.title}</strong>
-            <p>{backupResult.message}</p>
+        {failed && (
+          <div className="admin-feedback" data-tone="danger" role="alert">
+            <p>Reminder settings could not be loaded.</p>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => void load()}
+            >
+              Try again
+            </button>
           </div>
         )}
-        <p>
-          Finance includes the company ledger and accountant CSV exports. The
-          owner reviews opening balances and reconciliation while handling the
-          accounts. Payments are recorded manually with uploaded evidence.
-          Export amounts use their named currency and integer minor units.
-        </p>
-      </details>
-    </section>
+        {!settings && !failed && (
+          <p role="status">Loading reminder settings…</p>
+        )}
+        {settings && (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setBusy(true);
+              try {
+                setSettings(
+                  await api<AutomationSettings>(
+                    "business/automation",
+                    settings,
+                  ),
+                );
+                setDirty(false);
+                setMessage("Reminder settings saved.");
+              } catch (error) {
+                setMessage(error as Error);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <fieldset className="admin-form-fields" disabled={busy}>
+              <legend className="sr-only">Reminder preferences</legend>
+              <div className="admin-settings-rows">
+                {reminderOptions.map(([key, title, description]) => (
+                  <label className="admin-setting-row" key={key}>
+                    <span>
+                      <strong>{title}</strong>
+                      <span>{description}</span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      role="switch"
+                      aria-label={title}
+                      checked={!!settings[key]}
+                      onChange={(e) => {
+                        setSettings({ ...settings, [key]: e.target.checked });
+                        setDirty(true);
+                      }}
+                    />
+                  </label>
+                ))}
+              </div>
+              <div className="field admin-short-field">
+                <label htmlFor="reminder-interval">
+                  Minimum reminder period in days
+                </label>
+                <input
+                  id="reminder-interval"
+                  aria-describedby="reminder-interval-help"
+                  type="number"
+                  min={1}
+                  max={90}
+                  required
+                  value={settings.interval_days}
+                  onChange={(e) => {
+                    setSettings({
+                      ...settings,
+                      interval_days: Number(e.target.value),
+                    });
+                    setDirty(true);
+                  }}
+                />
+                <small id="reminder-interval-help">
+                  Wait this many days before repeating a reminder.
+                </small>
+              </div>
+            </fieldset>
+            <div className="admin-form-footer">
+              <p>
+                Check customer contact details before enabling external emails.
+              </p>
+              <button disabled={busy}>
+                {busy ? "Saving…" : "Save reminder settings"}
+              </button>
+            </div>
+          </form>
+        )}
+      </section>
+      <BusinessCalendar />
+    </div>
   );
 }

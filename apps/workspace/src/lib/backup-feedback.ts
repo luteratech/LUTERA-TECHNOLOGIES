@@ -32,7 +32,7 @@ export function backupFeedback(
         "Your encrypted primary backup was created and verified." +
         (pending
           ? " The Google Drive copy is still pending."
-          : " Check the latest Drive receipt in backup health."),
+          : " Check the latest Drive receipt in Backups & recovery."),
     };
   if (latest?.day === day && ["primary", "complete"].includes(latest.status))
     return {
@@ -55,6 +55,6 @@ export function backupFeedback(
     tone: "info",
     title: "Backup status checked",
     message:
-      "This request did not create a new backup. Review the latest backup date and status in Operations health before relying on it.",
+      "This request did not create a new backup. Review the latest backup date and status in Backups & recovery.",
   };
 }

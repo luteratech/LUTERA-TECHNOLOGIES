@@ -95,6 +95,7 @@ export default function NotificationCenter() {
     [historyOpen, setHistoryOpen] = useState(false),
     [confirmation, setConfirmation] = useState<ConfirmRequest | null>(null),
     [host, setHost] = useState<HTMLElement | null>(null),
+    [bellHost, setBellHost] = useState<HTMLElement | null>(null),
     [inputValue, setInputValue] = useState("");
   const dialog = useRef<HTMLDialogElement>(null),
     pending = useRef<ConfirmRequest | null>(null),
@@ -147,6 +148,7 @@ export default function NotificationCenter() {
         document.querySelectorAll<HTMLDialogElement>("dialog[open]"),
       );
       setHost(open.at(-1) || document.body);
+      setBellHost(document.getElementById("workspace-notification-slot"));
     };
     let invalidFrame: number | undefined;
     const invalid = (event: Event) => {
@@ -247,6 +249,34 @@ export default function NotificationCenter() {
     document.addEventListener("pointerdown", outside);
     return () => document.removeEventListener("pointerdown", outside);
   }, [historyOpen]);
+  const notificationButton = (
+    <button
+      ref={bell}
+      className="app-notification-bell"
+      aria-label={`Notifications${notices.some((n) => !n.read) ? `, ${notices.filter((n) => !n.read).length} unread` : ""}`}
+      aria-expanded={historyOpen}
+      aria-controls="app-notification-history"
+      onClick={() => setHistoryOpen((v) => !v)}
+    >
+      <svg
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        aria-hidden="true"
+      >
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z" />
+        <path d="M10 21h4" />
+      </svg>
+      {notices.some((n) => !n.read) && (
+        <span className="app-notification-count">
+          {notices.filter((n) => !n.read).length}
+        </span>
+      )}
+    </button>
+  );
   const floating = (
     <>
       <section className="app-toast-stack" aria-label="Workspace notifications">
@@ -261,32 +291,7 @@ export default function NotificationCenter() {
             />
           ))}
       </section>
-      <button
-        ref={bell}
-        className="app-notification-bell"
-        aria-label={`Notifications${notices.some((n) => !n.read) ? `, ${notices.filter((n) => !n.read).length} unread` : ""}`}
-        aria-expanded={historyOpen}
-        aria-controls="app-notification-history"
-        onClick={() => setHistoryOpen((v) => !v)}
-      >
-        <svg
-          width="22"
-          height="22"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          aria-hidden="true"
-        >
-          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z" />
-          <path d="M10 21h4" />
-        </svg>
-        {notices.some((n) => !n.read) && (
-          <span className="app-notification-count">
-            {notices.filter((n) => !n.read).length}
-          </span>
-        )}
-      </button>
+      {!bellHost && notificationButton}
       {historyOpen && (
         <section
           ref={historyRef}
@@ -342,6 +347,7 @@ export default function NotificationCenter() {
   return (
     <>
       {host && createPortal(floating, host)}
+      {bellHost && createPortal(notificationButton, bellHost)}
       <dialog
         ref={dialog}
         className="app-confirmation"

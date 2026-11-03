@@ -132,8 +132,50 @@ export async function GET(
       try {
         counts = await job({ action: "health" });
       } catch {}
+      const fields =
+        "id,status,created_at,updated_at,bytes,file_count,last_error,drive_id";
+      const [history, primary, drive] = await Promise.all([
+        db
+          .from("work_backup_runs")
+          .select(fields)
+          .order("created_at", { ascending: false })
+          .limit(12),
+        db
+          .from("work_backup_runs")
+          .select(fields)
+          .in("status", ["primary", "complete"])
+          .order("created_at", { ascending: false })
+          .limit(1),
+        db
+          .from("work_backup_runs")
+          .select(fields)
+          .eq("status", "complete")
+          .not("drive_id", "is", null)
+          .order("updated_at", { ascending: false })
+          .limit(1),
+      ]);
+      const view = (row: {
+        id: string;
+        status: string;
+        created_at: string;
+        updated_at: string;
+        bytes: number | null;
+        file_count: number | null;
+        last_error: string;
+        drive_id: string | null;
+      }) => {
+        const { drive_id, ...record } = row;
+        return {
+          ...record,
+          drive_verified: record.status === "complete" && !!drive_id,
+        };
+      };
+      const backupRuns = checked(history).map(view);
       return ok({
         automation,
+        backup_runs: backupRuns,
+        latest_primary: checked(primary).map(view).at(0) || null,
+        latest_drive: checked(drive).map(view).at(0) || null,
         health: {
           public_site_publishing: !!process.env.PUBLIC_SITE_DEPLOY_HOOK,
           attachment_malware_scanner: !!process.env.CLAMAV_HOST,
@@ -142,14 +184,7 @@ export async function GET(
           background_jobs: !!process.env.BUSINESS_JOB_SECRET,
           ...backupConfiguration(),
           ...counts,
-          latest_backup:
-            checked(
-              await db
-                .from("work_backup_runs")
-                .select("status,last_error,created_at,file_count")
-                .order("created_at", { ascending: false })
-                .limit(1),
-            ).at(0) || "Not run yet",
+          latest_backup: backupRuns.at(0) || null,
         },
       });
     }
@@ -450,8 +485,13 @@ export async function POST(
         .parse(raw);
       if (action === "backup-run") {
         const result = await runBusinessBackup();
-        const latest = await db.from("work_backup_runs").select("id,day,status,created_at,bytes,file_count").order("created_at",{ascending:false}).limit(1).maybeSingle();
-        return ok({...result,latest:latest.error ? null : latest.data});
+        const latest = await db
+          .from("work_backup_runs")
+          .select("id,day,status,created_at,bytes,file_count")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        return ok({ ...result, latest: latest.error ? null : latest.data });
       }
       if (action === "backup-drive-setup") {
         if (!process.env.DRIVE_BACKUP_SECRET)

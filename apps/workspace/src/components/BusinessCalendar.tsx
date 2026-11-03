@@ -2,6 +2,7 @@
 import { useFeedback } from "@/lib/notifications";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client";
+import { useUnsavedChanges } from "@/lib/unsaved";
 type Calendar = {
   version: number;
   days: number[];
@@ -18,20 +19,46 @@ const minutes = (value: string) =>
 export default function BusinessCalendar() {
   const [value, setValue] = useState<Calendar | null>(null),
     [message, setMessage] = useFeedback(),
-    [busy, setBusy] = useState(false);
-  useEffect(() => {
+    [busy, setBusy] = useState(false),
+    [dirty, setDirty] = useState(false),
+    [failed, setFailed] = useState(false);
+  useUnsavedChanges(dirty);
+  const load = () =>
     api<Calendar>("business/delivery-calendar")
-      .then(setValue)
-      .catch((e) => setMessage(e));
+      .then((r) => {
+        setValue(r);
+        setFailed(false);
+      })
+      .catch((e) => {
+        setFailed(true);
+        setMessage(e);
+      });
+  useEffect(() => {
+    void load();
   }, []);
   return (
-    <details className="ops-gap">
-      <summary>Agreed service calendar</summary>
-      <p>
-        Business timezone: Africa/Lagos. This calendar calculates explicitly
-        agreed first-response targets; it does not create a support promise by
-        itself. Existing deadlines remain recorded when the calendar changes.
-      </p>
+    <section className="panel admin-panel" aria-labelledby="calendar-heading">
+      <div className="admin-section-heading">
+        <div>
+          <h2 id="calendar-heading">Working calendar</h2>
+          <p>
+            Set your working days, hours and holidays. All times use Abuja time.
+          </p>
+        </div>
+      </div>
+      {!value && !failed && <p role="status">Loading working calendar…</p>}
+      {failed && (
+        <div className="admin-feedback" data-tone="danger" role="alert">
+          <p>Working calendar could not be loaded.</p>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => void load()}
+          >
+            Try again
+          </button>
+        </div>
+      )}
 
       {value && (
         <form
@@ -53,6 +80,7 @@ export default function BusinessCalendar() {
                   },
                 }),
               );
+              setDirty(false);
               setMessage("Business calendar saved.");
             } catch (e) {
               setMessage(e as Error);
@@ -61,70 +89,91 @@ export default function BusinessCalendar() {
             }
           }}
         >
-          <fieldset>
-            <legend>Working days</legend>
-            {[
-              "Sunday",
-              "Monday",
-              "Tuesday",
-              "Wednesday",
-              "Thursday",
-              "Friday",
-              "Saturday",
-            ].map((d, i) => (
-              <label className="check" key={d}>
+          <fieldset className="admin-form-fields" disabled={busy}>
+            <fieldset className="admin-working-days">
+              <legend>Working days</legend>
+              {[
+                "Sunday",
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+              ].map((d, i) => (
+                <label className="check" key={d}>
+                  <input
+                    type="checkbox"
+                    checked={value.days.includes(i)}
+                    onChange={(e) => {
+                      setDirty(true);
+                      setValue({
+                        ...value,
+                        days: e.target.checked
+                          ? [...value.days, i]
+                          : value.days.filter((n) => n !== i),
+                      });
+                    }}
+                  />
+                  {d}
+                </label>
+              ))}
+            </fieldset>
+            <div className="form-grid">
+              <label className="field">
+                <span>Opening time</span>
                 <input
-                  type="checkbox"
-                  checked={value.days.includes(i)}
-                  onChange={(e) =>
+                  type="time"
+                  required
+                  value={time(value.start_minute)}
+                  onChange={(e) => {
+                    setDirty(true);
                     setValue({
                       ...value,
-                      days: e.target.checked
-                        ? [...value.days, i]
-                        : value.days.filter((n) => n !== i),
-                    })
-                  }
+                      start_minute: minutes(e.target.value),
+                    });
+                  }}
                 />
-                {d}
               </label>
-            ))}
+              <label className="field">
+                <span>Closing time</span>
+                <input
+                  type="time"
+                  required
+                  value={time(value.end_minute)}
+                  onChange={(e) => {
+                    setDirty(true);
+                    setValue({ ...value, end_minute: minutes(e.target.value) });
+                  }}
+                />
+              </label>
+              <label className="field full">
+                <span>Holidays and other non-working dates</span>
+                <textarea
+                  placeholder="2026-12-25"
+                  value={value.holidays.join("\n")}
+                  onChange={(e) => {
+                    setDirty(true);
+                    setValue({
+                      ...value,
+                      holidays: e.target.value.split("\n"),
+                    });
+                  }}
+                />
+              </label>
+            </div>
           </fieldset>
-          <div className="form-grid">
-            <label className="field">
-              <span>Opening time</span>
-              <input
-                type="time"
-                required
-                value={time(value.start_minute)}
-                onChange={(e) =>
-                  setValue({ ...value, start_minute: minutes(e.target.value) })
-                }
-              />
-            </label>
-            <label className="field">
-              <span>Closing time</span>
-              <input
-                type="time"
-                required
-                value={time(value.end_minute)}
-                onChange={(e) =>
-                  setValue({ ...value, end_minute: minutes(e.target.value) })
-                }
-              />
-            </label>
-            <label className="field full">
-              <span>Non-working dates (one YYYY-MM-DD per line)</span>
-              <textarea
-                value={value.holidays.join("\n")}
-                onChange={(e) =>
-                  setValue({ ...value, holidays: e.target.value.split("\n") })
-                }
-              />
-            </label>
+          <div className="admin-form-footer">
+            <p>
+              Enter one date per line as YYYY-MM-DD. Changes apply to future
+              response targets.
+            </p>
+            <button disabled={busy}>
+              {busy ? "Saving…" : "Save business calendar"}
+            </button>
           </div>
-          <button disabled={busy}>Save business calendar</button>
         </form>
       )}
-    </details>
+    </section>
   );
 }

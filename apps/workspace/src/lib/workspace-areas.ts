@@ -748,9 +748,25 @@ export const workspaceTools: WorkspaceTool[] = [
     id: "operating-settings",
     department: "administration",
     label: "Operations settings",
-    description:
-      "Manage working calendars, reminder settings and integration health.",
+    description: "Manage reminders, working hours and holidays.",
     section: "business-settings",
+    capability: "members",
+  },
+  {
+    id: "integrations",
+    department: "administration",
+    label: "Integrations",
+    description: "Review connected services and work needing attention.",
+    section: "business-integrations",
+    capability: "members",
+  },
+  {
+    id: "operating-policy",
+    department: "administration",
+    label: "Retention & recovery policy",
+    description:
+      "Set retention periods, recovery targets and owner responsibilities.",
+    section: "business-policy",
     capability: "members",
   },
   {
@@ -819,6 +835,8 @@ export const workspaceSections = [
   "staff",
   "settings",
   "business-settings",
+  "business-integrations",
+  "business-policy",
   "members",
   "audit",
   "backup",
