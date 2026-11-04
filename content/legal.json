@@ -24,6 +24,10 @@
         "Enquiries are reviewed through the business email inbox. Information is retained only as needed for the enquiry, an agreed transaction and relevant legal obligations. You can request deletion using the contact email; third-party providers may retain logs or backups according to their policies. Providers may process information outside Nigeria. No private customer account or RFQ database is operated by this website. Retention periods are set by the company owner according to record purpose and applicable obligations; no fixed retention duration is represented here as confirmed. Contact us for the retention criteria and any international processing arrangements relevant to your information."
       ],
       [
+        "Private workspace attachment scanning",
+        "When attachment scanning is enabled, new files uploaded to the private staff workspace or customer portal are sent to Bouncer for malware checking before they are saved. This includes payment and acceptance evidence, photos and signature images. Bouncer processes document contents externally; its published privacy policy lists storage in India and deletion of uploaded files within 24 hours. Scan metadata is retained for account history. See <a href=\"https://usebouncer.dev/privacy/\" target=\"_blank\" rel=\"noopener noreferrer\">Bouncer’s privacy policy</a>. Previously stored files are not automatically rescanned."
+      ],
+      [
         "Your rights",
         "Contact the email above to request access, correction, deletion or information about processing. Applicable rights and exceptions depend on law, including the Nigeria Data Protection Act 2023. You may also contact the Nigeria Data Protection Commission. This notice describes the workflow and does not claim certification or automatic legal compliance."
       ],

@@ -1,4 +1,5 @@
 import { randomBytes, randomUUID, createHash } from "node:crypto";
+import { AttachmentScanError } from "@/lib/evidence-scan";
 import { normalizeEvidence } from "@/lib/evidence";
 import { portalStorage } from "@/lib/customer-portal";
 import { cookies } from "next/headers";
@@ -75,7 +76,12 @@ export async function GET(
               },
             }
       ) as BusinessDocument;
-      const bytes = await financialExport(doc, settings, "pdf", data.approvals || []);
+      const bytes = await financialExport(
+        doc,
+        settings,
+        "pdf",
+        data.approvals || [],
+      );
       return new Response(new Uint8Array(bytes), {
         headers: {
           "Content-Type": "application/pdf",
@@ -179,6 +185,14 @@ export async function POST(
         .strict()
         .parse(raw);
       await enforceAuthLimit(jobDatabase(), request, "portal/evidence", hash);
+      const state = await portal({ action: "state", session_hash: hash });
+      if (
+        !state.acceptance_requests?.some(
+          (r: { id: string; status: string }) =>
+            r.id === b.request_id && r.status !== "completed",
+        )
+      )
+        throw Error("Acceptance request unavailable");
       const prepared = await normalizeEvidence(Buffer.from(b.data, "base64")),
         id = randomUUID();
       const record = await portal({
@@ -234,12 +248,15 @@ export async function POST(
       {
         error: rate
           ? error.message
-          : error instanceof z.ZodError
-            ? "Check your email or sign-in link."
-            : "Customer access could not be completed. Check your link or contact Lutera.",
+          : error instanceof AttachmentScanError
+            ? error.message
+            : error instanceof z.ZodError
+              ? "Check your email or sign-in link."
+              : "Customer access could not be completed. Check your link or contact Lutera.",
       },
       {
-        status: rate ? error.status : 400,
+        status:
+          rate || error instanceof AttachmentScanError ? error.status : 400,
         headers:
           rate && error.retryAfter
             ? { "Retry-After": String(error.retryAfter) }

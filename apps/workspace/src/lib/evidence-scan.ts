@@ -1,15 +1,52 @@
 import { createConnection } from "node:net";
 import { connect as tlsConnect } from "node:tls";
-/** Private company ClamAV INSTREAM endpoint. Never sends uploads to public scanners. */
-export async function scanEvidence(
-  bytes: Buffer,
-  configuration = {
+import { scanBouncer, AttachmentScanError } from "./bouncer-scan";
+export { AttachmentScanError } from "./bouncer-scan";
+export type ScanConfiguration = {
+  provider?: string;
+  apiKey?: string;
+  host?: string;
+  port?: string;
+  tls?: string;
+};
+export function scanConfiguration(): ScanConfiguration {
+  return {
+    provider: process.env.ATTACHMENT_SCANNER_PROVIDER,
+    apiKey: process.env.BOUNCER_API_KEY,
     host: process.env.CLAMAV_HOST,
     port: process.env.CLAMAV_PORT,
     tls: process.env.CLAMAV_TLS,
-  },
+  };
+}
+export function scannerStatus(configuration = scanConfiguration()) {
+  const provider =
+    configuration.provider ||
+    (configuration.apiKey ? "bouncer" : configuration.host ? "clamav" : "none");
+  return {
+    provider,
+    configured:
+      provider === "bouncer"
+        ? !!configuration.apiKey
+        : provider === "clamav"
+          ? !!configuration.host
+          : false,
+  };
+}
+/** Scans original bytes before storage. Configured provider failures never bypass scanning. */
+export async function scanEvidence(
+  bytes: Buffer,
+  configuration: ScanConfiguration = scanConfiguration(),
 ) {
-  if (!configuration.host) return { configured: false as const };
+  const state = scannerStatus(configuration);
+  if (state.provider === "none") return { configured: false as const };
+  if (state.provider === "bouncer") {
+    await scanBouncer(bytes, configuration.apiKey);
+    return { configured: true as const };
+  }
+  if (state.provider !== "clamav" || !state.configured)
+    throw new AttachmentScanError(
+      "Attachment scanning is not configured correctly. Your file was not saved.",
+    );
   const port = Number(configuration.port || 3310);
   if (!Number.isInteger(port) || port < 1 || port > 65535)
     throw new Error("Attachment scanning is not configured correctly.");

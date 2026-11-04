@@ -26,6 +26,7 @@ import { emailActionSchema } from "@/lib/auth-email";
 import { enforceAuthLimit, AuthLimitError } from "@/lib/rate-limit";
 import { newPasswordSchema } from "@/lib/password";
 import { profileSchema, emailChangeSchema } from "@/lib/account-contracts";
+import { scanEvidence, AttachmentScanError } from "@/lib/evidence-scan";
 import { normalizeAvatar } from "@/lib/avatar";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -583,7 +584,10 @@ export async function POST(
         try {
           image = await normalizeAvatar(body.photo);
         } catch (error) {
-          throw new Failure((error as Error).message);
+          throw new Failure(
+            (error as Error).message,
+            error instanceof AttachmentScanError ? error.status : 400,
+          );
         }
         uploaded = user.id + "/" + randomUUID() + ".jpg";
         check(
@@ -836,6 +840,14 @@ export async function POST(
       const bytes = Buffer.from(body.data, "base64");
       if (bytes.length > 1048576)
         throw new Failure("Choose a photo under 1 MB");
+      try {
+        await scanEvidence(bytes);
+      } catch (error) {
+        throw new Failure(
+          (error as Error).message,
+          error instanceof AttachmentScanError ? error.status : 400,
+        );
+      }
       const image = sharp(bytes, {
         limitInputPixels: 16000000,
         animated: false,

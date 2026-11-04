@@ -2,6 +2,7 @@ import { z } from "zod";
 import { csv } from "@/lib/business";
 import type { LedgerReport } from "@/lib/suite";
 import sharp from "sharp";
+import { scanEvidence, AttachmentScanError } from "@/lib/evidence-scan";
 import { randomUUID } from "node:crypto";
 import { assertOrigin } from "@/lib/contracts";
 import { workspaceOrigin } from "@/lib/origin";
@@ -18,6 +19,7 @@ import {
   journalSchema,
 } from "@/lib/suite";
 export const runtime = "nodejs";
+export const maxDuration = 60;
 const ok = (data: unknown) =>
   Response.json(data, { headers: { "Cache-Control": "private, no-store" } });
 function fail(e: unknown) {
@@ -25,7 +27,9 @@ function fail(e: unknown) {
   return Response.json(
     {
       error:
-        e instanceof BusinessError || e instanceof AuthLimitError
+        e instanceof BusinessError ||
+        e instanceof AuthLimitError ||
+        e instanceof AttachmentScanError
           ? e.message
           : issue
             ? `${issue.path.join(" · ").replaceAll("_", " ")}: ${issue.message}`
@@ -33,7 +37,9 @@ function fail(e: unknown) {
     },
     {
       status:
-        e instanceof BusinessError || e instanceof AuthLimitError
+        e instanceof BusinessError ||
+        e instanceof AuthLimitError ||
+        e instanceof AttachmentScanError
           ? e.status
           : issue
             ? 400
@@ -322,6 +328,7 @@ export async function POST(
       const image = Buffer.from(data.image_data.split(",")[1], "base64");
       if (image.length > 200000)
         throw new BusinessError("Upload a signature under 200 KB.");
+      await scanEvidence(image);
       const png = await sharp(image, { limitInputPixels: 4000000 })
         .rotate()
         .resize({

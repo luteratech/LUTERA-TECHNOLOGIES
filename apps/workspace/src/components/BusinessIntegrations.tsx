@@ -1,4 +1,15 @@
 "use client";
+import { useState } from "react";
+import { api } from "@/lib/client";
+import { useFeedback } from "@/lib/notifications";
+import { backupDate } from "@/lib/operations-health";
+type ScannerAllowance = {
+  used: number;
+  limit: number;
+  remaining: number;
+  resetsAt: string;
+  tier: "free";
+};
 import {
   HealthBadge,
   HealthError,
@@ -29,6 +40,29 @@ const integrations = [
 ] as const;
 export default function BusinessIntegrations() {
   const { data, error, refreshing, refresh } = useOperationsHealth();
+  const [checking, setChecking] = useState(false),
+    [allowance, setAllowance] = useState<ScannerAllowance | null>(null),
+    [, setNotice] = useFeedback();
+  async function checkScanner() {
+    setChecking(true);
+    setAllowance(null);
+    try {
+      const result = await api<{ allowance: ScannerAllowance }>(
+        "business/scanner-check",
+        {},
+      );
+      setAllowance(result.allowance);
+      setNotice(
+        "Bouncer connection verified. " +
+          result.allowance.remaining +
+          " scans remain on the free plan.",
+      );
+    } catch (error) {
+      setNotice(error as Error);
+    } finally {
+      setChecking(false);
+    }
+  }
   return (
     <div className="admin-layout">
       {error && (
@@ -89,6 +123,53 @@ export default function BusinessIntegrations() {
                 </div>
               ))}
             </div>
+            <details className="admin-disclosure">
+              <summary>Bouncer attachment scanning</summary>
+              <p>
+                The free plan has up to 500 scans per month. Files with failed,
+                incomplete, suspicious or malicious results are not saved.
+                Account quota is shared with any other use of the same Bouncer
+                account.
+              </p>
+              {data.health.attachment_scanner_provider === "bouncer" &&
+              data.health.attachment_malware_scanner ? (
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={checking || refreshing}
+                  onClick={() => void checkScanner()}
+                >
+                  {checking ? "Checking Bouncer…" : "Check Bouncer connection"}
+                </button>
+              ) : (
+                <p>
+                  Setup pending. Add BOUNCER_API_KEY to the workspace’s private
+                  production environment in Vercel, redeploy, then check
+                  connections here. Keep the key out of website content and
+                  client code.
+                </p>
+              )}
+              {allowance && (
+                <dl className="admin-queue-summary">
+                  <div>
+                    <dt>Free scans remaining</dt>
+                    <dd className="admin-figure">
+                      {allowance.remaining} / {allowance.limit}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Next quota reset · Abuja time</dt>
+                    <dd>{backupDate(allowance.resetsAt)}</dd>
+                  </div>
+                </dl>
+              )}
+              <p className="admin-footnote">
+                The connection check does not upload a file or use a scan. Only
+                new uploads are checked; previously stored files are not
+                automatically rescanned. Bouncer processes files externally and
+                its published policy allows retention for up to 24 hours.
+              </p>
+            </details>
             <p className="admin-footnote">
               Configured means connection settings are present. It does not
               confirm successful delivery or a completed scan.

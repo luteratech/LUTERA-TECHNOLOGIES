@@ -15,6 +15,8 @@ can receive a sign-in link.
 For the 3 November workspace/public-site correction register, see
 [the correction release](workspace-corrections-2026-11-03.md).
 
+For the selected hosted malware provider, see [Bouncer attachment scanning](bouncer-attachment-scanning.md).
+
 ## Business rules
 
 - **No payment gateway or automatic bank transactions.** Customer payments,

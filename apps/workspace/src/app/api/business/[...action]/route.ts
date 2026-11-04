@@ -4,6 +4,8 @@ import { randomUUID, createHash } from "node:crypto";
 import { z } from "zod";
 import { documentSignatures } from "@/lib/signatures";
 import { statementPDF, type StatementSnapshot } from "@/lib/statement";
+import { scannerStatus, AttachmentScanError } from "@/lib/evidence-scan";
+import { checkBouncer } from "@/lib/bouncer-scan";
 import { normalizeEvidence } from "@/lib/evidence";
 import {
   businessIdentity,
@@ -361,7 +363,8 @@ export async function GET(
         latest_drive: checked(drive).map(view).at(0) || null,
         health: {
           public_site_publishing: !!process.env.PUBLIC_SITE_DEPLOY_HOOK,
-          attachment_malware_scanner: !!process.env.CLAMAV_HOST,
+          attachment_malware_scanner: scannerStatus().configured,
+          attachment_scanner_provider: scannerStatus().provider,
           business_email: !!process.env.BUSINESS_MAIL_KEY,
           signed_delivery_events: !!process.env.BUSINESS_MAIL_WEBHOOK_SECRET,
           background_jobs: !!process.env.BUSINESS_JOB_SECRET,
@@ -687,6 +690,26 @@ export async function POST(
     const action = (await context.params).action.join("/");
     const { db, user } = await businessIdentity();
     const raw = await boundedJSON(request);
+    if (action === "scanner-check") {
+      z.object({}).strict().parse(raw);
+      if (!checked(await db.rpc("work_has_access", { area: "members" })))
+        throw new BusinessError("Owner access required.", 403);
+      if (scannerStatus().provider !== "bouncer")
+        throw new BusinessError(
+          "Add the Bouncer key in the private hosting settings first.",
+        );
+      try {
+        return ok({
+          provider: "bouncer",
+          allowance: await checkBouncer(process.env.BOUNCER_API_KEY),
+        });
+      } catch (error) {
+        throw new BusinessError(
+          (error as Error).message,
+          error instanceof AttachmentScanError ? error.status : 503,
+        );
+      }
+    }
     if (action === "grant-areas") {
       const b = z
         .object({
@@ -1462,11 +1485,20 @@ export async function POST(
         })
         .strict()
         .parse(raw);
+      const caps = checked(await db.rpc("work_business_access")) as Access;
+      if (!caps[b.area]?.write)
+        throw new BusinessError(
+          "File upload access is required for this department.",
+          403,
+        );
       let prepared;
       try {
         prepared = await normalizeEvidence(Buffer.from(b.data, "base64"));
       } catch (e) {
-        throw new BusinessError((e as Error).message);
+        throw new BusinessError(
+          (e as Error).message,
+          e instanceof AttachmentScanError ? e.status : 400,
+        );
       }
       const normalized = prepared.bytes,
         id = randomUUID(),

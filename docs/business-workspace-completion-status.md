@@ -87,11 +87,12 @@ emails are required by these checks.
    production environment on 27 October. The contact/navigation release deploys
    with this setting. A signed-in draft → Publish → live-revision acceptance
    check remains part of the company pilot; saving is distinct from publication.
-3. **Malware service:** the private ClamAV INSTREAM adapter is implemented and
-   tested. A company-controlled scanner endpoint must be configured using
-   `CLAMAV_HOST`, optional `CLAMAV_PORT` and `CLAMAV_TLS`. A configured scanner
-   fails closed. Without it, type/size validation and file reconstruction remain
-   active, but production malware scanning is not claimed.
+3. **Malware service:** Bouncer was selected on 4 November. The server-side
+   integration and free-plan/connection checks are implemented; activation needs
+   the company key in Vercel, a successful deployment preflight and a verified
+   synthetic upload. See [Bouncer setup and limits](bouncer-attachment-scanning.md).
+   Configured provider failures block uploads. Without a selected provider,
+   type/size validation and reconstruction remain; scanning is not claimed.
 4. **Supabase Auth:** enable [leaked-password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)
    if supported by the account plan. The provider advisor still reports it off.
 5. **Company acceptance:** the owner confirms tax/bank details, opening

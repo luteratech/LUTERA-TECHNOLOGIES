@@ -164,7 +164,7 @@ if os.environ.get('LUTERA_ENQUIRY_TRANSPORT', 'workspace') == 'workspace':
         body=body.replace('Enquiries are reviewed through the business email inbox.', 'Enquiries are reviewed by authorized staff in the private business workspace.')
         body=body.replace('No private customer account or RFQ database is operated by this website.', 'Approved customers may separately access explicitly shared documents through the customer portal. Staff access and customer access are separate.')
         body=body.replace('Sending a form takes you to FormSubmit for processing and spam prevention. Its service and Google reCAPTCHA may use cookies or similar technology. Read <a href="https://formsubmit.co/privacy.pdf" target="_blank" rel="noopener noreferrer">FormSubmit’s privacy policy</a> for details.', 'Public forms send your enquiry to Lutera’s private business system. The customer portal uses a secure session cookie after you explicitly sign in; it is not an advertising or analytics cookie.')
-        body=re.sub(r'Spam-prevention services may use their own cookies on the submission page\. Last updated: \d{1,2} [A-Za-z]+ \d{4}\.', 'The separately accessed customer portal uses a secure session cookie. Last updated: 3 November 2026.', body)
+        body=re.sub(r'Spam-prevention services may use their own cookies on the submission page\. Last updated: \d{1,2} [A-Za-z]+ \d{4}\.', 'The separately accessed customer portal uses a secure session cookie. Last updated: 4 November 2026.', body)
         pages[route]=(title,body)
 
 # Archived service addresses remain reachable while current listings stay accurate.
